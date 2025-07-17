@@ -1,3 +1,15 @@
+(function() {
+  if (!document.getElementById('shopify-chatbot-widget-css')) {
+    var link = document.createElement('link');
+    link.id = 'shopify-chatbot-widget-css';
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = 'https://widget-frontend-6mo6.onrender.com/shopify_chatbot_widget.css';
+    link.media = 'all';
+    document.head.appendChild(link);
+  }
+})();
+
 // Configuration
 const API_BASE_URL = 'https://cartrecover-bot.onrender.com/api/chat';
 const HISTORY_API_URL = 'https://cartrecover-bot.onrender.com/api/session';
