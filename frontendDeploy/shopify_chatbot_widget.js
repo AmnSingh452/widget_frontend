@@ -64,6 +64,9 @@ const chatInput = document.getElementById('chat-input');
 const chatSendButton = document.getElementById('chat-send-button');
 const newChatButton = document.getElementById('new-chat-button'); // New chat button
 
+// Detect the current shop domain from the Shopify storefront
+const SHOP_DOMAIN = (window.Shopify && window.Shopify.shop) || null;
+
 // Helper to check if user is logged into Shopify
 async function checkShopifyCustomer() {
     try {
@@ -254,7 +257,7 @@ async function sendMessage() {
         const response = await fetch(API_BASE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, session_id: sessionId }),
+            body: JSON.stringify({ message, session_id: sessionId, shop_domain: SHOP_DOMAIN }),
         });
         const data = await response.json();
         console.log('Raw API response:', data);
@@ -341,7 +344,7 @@ async function fetchAndShowRecommendations(productIds = [], customerId = null) {
         const response = await fetch(RECOMMENDATIONS_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: productIds, customer_id: customerId })
+            body: JSON.stringify({ product_ids: productIds, customer_id: customerId, shop_domain: SHOP_DOMAIN })
         });
         const data = await response.json();
         console.log('Recommendations API response:', data); // Debug log
@@ -402,7 +405,7 @@ async function offerAbandonedCartDiscount() {
     const response = await fetch(DISCOUNT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId })
+        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId, shop_domain: SHOP_DOMAIN })
     });
     const data = await response.json();
     if (data.discount_code) {
