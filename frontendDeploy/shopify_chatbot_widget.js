@@ -302,33 +302,7 @@ const HESITATION_PHRASES = [
 console.log('Script loaded. Initial sessionId:', sessionId);
 console.log('Initial customerName:', customerName);
 
-const widgetContainer = document.getElementById('shopify-chatbot-widget');
-if (widgetContainer) {
-    widgetContainer.innerHTML = `
-        <button id="chat-toggle-button" class="chat-button">💬</button>
-        <div id="chat-window" class="chat-window chat-window-hidden">
-            <div class="chat-header">
-                <span>Shopify Chatbot</span>
-                <button id="chat-close-button" class="chat-close-button">&times;</button>
-            </div>
-            <div id="chat-messages" class="chat-messages"></div>
-            <div class="chat-input-area">
-                <input id="chat-input" class="chat-input" type="text" placeholder="Type your message..." autocomplete="off" />
-                <button id="chat-send-button" class="send-button">&#9658;</button>
-            </div>
-            <button id="new-chat-button" class="new-chat-button">New Chat</button>
-        </div>
-    `;
-}
-
-// DOM Elements
-const chatToggleButton = document.getElementById('chat-toggle-button');
-const chatCloseButton = document.getElementById('chat-close-button');
-const chatWindow = document.getElementById('chat-window');
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-const chatSendButton = document.getElementById('chat-send-button');
-const newChatButton = document.getElementById('new-chat-button'); // New chat button
+// ...existing code...
 
 // Helper to check if user is logged into Shopify
 async function checkShopifyCustomer() {
