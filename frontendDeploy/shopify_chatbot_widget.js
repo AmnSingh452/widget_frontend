@@ -1,4 +1,3 @@
-
 // JARVIS 2.0 Integration
 const JARVIS_API_URL = 'https://jarvis2-0-djg1.onrender.com'; // <-- Replace with your Jarvis app URL
 const DEFAULT_WIDGET_SETTINGS = {
@@ -20,6 +19,12 @@ const DEFAULT_WIDGET_SETTINGS = {
 };
 let widgetSettings = { ...DEFAULT_WIDGET_SETTINGS };
 
+// Detect shop domain globally
+const SHOP_DOMAIN = window.Shopify?.shop || null;
+if (!SHOP_DOMAIN) {
+    console.error('Shop domain not found. Multi-tenant frontend requires shop domain.');
+}
+
 // Inject base CSS if not present
 (function() {
   if (!document.getElementById('shopify-chatbot-widget-css')) {
@@ -35,10 +40,9 @@ let widgetSettings = { ...DEFAULT_WIDGET_SETTINGS };
 
 // Fetch widget settings from Jarvis API
 async function fetchWidgetSettings() {
-    const shopDomain = window.Shopify?.shop;
-    if (!shopDomain) return null;
+    if (!SHOP_DOMAIN) return null;
     try {
-        const response = await fetch(`${JARVIS_API_URL}/api/widget-settings?shop=${shopDomain}`);
+        const response = await fetch(`${JARVIS_API_URL}/api/widget-settings?shop=${SHOP_DOMAIN}`);
         const data = await response.json();
         return data.settings || null;
     } catch (error) {
@@ -302,8 +306,6 @@ const HESITATION_PHRASES = [
 console.log('Script loaded. Initial sessionId:', sessionId);
 console.log('Initial customerName:', customerName);
 
-// ...existing code...
-
 // Helper to check if user is logged into Shopify
 async function checkShopifyCustomer() {
     try {
@@ -318,12 +320,15 @@ async function checkShopifyCustomer() {
 
 // Helper to update customer info
 async function updateCustomerInfo(name) {
-    if (!sessionId) return;
+    if (!sessionId || !SHOP_DOMAIN) {
+        console.error('Cannot update customer info: missing sessionId or shop domain.');
+        return;
+    }
     try {
         const response = await fetch(CUSTOMER_UPDATE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, session_id: sessionId }),
+            body: JSON.stringify({ name, session_id: sessionId, shop: SHOP_DOMAIN }),
         });
         const data = await response.json();
         if (data.success) {
@@ -463,7 +468,14 @@ chatCloseButton.addEventListener('click', () => {
 // Send message function
 async function sendMessage() {
     const message = chatInput.value.trim();
-    if (!message) return;
+    if (!message || !SHOP_DOMAIN) {
+        if (!SHOP_DOMAIN) {
+            renderMessages([
+                { role: 'bot', content: "Error: Shop domain not found. Please reload the page or contact support." }
+            ]);
+        }
+        return;
+    }
 
     // Handle the case where the user is providing their name
     const isNameSubmission = !customerName && chatMessages.textContent.includes("What's your name?");
@@ -494,7 +506,7 @@ async function sendMessage() {
         const response = await fetch(API_BASE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, session_id: sessionId }),
+            body: JSON.stringify({ message, session_id: sessionId, shop: SHOP_DOMAIN }),
         });
         const data = await response.json();
         console.log('Raw API response:', data);
@@ -577,11 +589,15 @@ function showBotMessage(message) {
 }
 
 async function fetchAndShowRecommendations(productIds = [], customerId = null) {
+    if (!SHOP_DOMAIN) {
+        showBotMessage("Error: Shop domain not found. Cannot fetch recommendations.");
+        return;
+    }
     try {
         const response = await fetch(RECOMMENDATIONS_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: productIds, customer_id: customerId })
+            body: JSON.stringify({ product_ids: productIds, customer_id: customerId, shop: SHOP_DOMAIN })
         });
         const data = await response.json();
         console.log('Recommendations API response:', data); // Debug log
@@ -639,10 +655,14 @@ function extractNameFromInput(input) {
 
 const SHOPIFY_STORE_DOMAIN = '4ja0wp-y1.myshopify.com';
 async function offerAbandonedCartDiscount() {
+    if (!sessionId || !SHOP_DOMAIN) {
+        showBotMessage("Error: Shop domain or session not found. Cannot offer discount.");
+        return;
+    }
     const response = await fetch(DISCOUNT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId })
+        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId, shop: SHOP_DOMAIN })
     });
     const data = await response.json();
     if (data.discount_code) {
@@ -656,4 +676,4 @@ async function offerAbandonedCartDiscount() {
     } else {
         showBotMessage("Sorry, there was an issue generating your discount code.");
     }
-}   
+}
