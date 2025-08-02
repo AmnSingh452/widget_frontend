@@ -342,6 +342,10 @@ async function updateCustomerInfo(name) {
 
 // Check cart and prompt for recovery   
 function checkCartAndPrompt() {
+    if (!SHOP_DOMAIN) {
+        showBotMessage("Error: Shop domain not found. Cannot check cart or fetch recommendations.");
+        return;
+    }
     fetch('/cart.js')
       .then(res => res.json())
       .then(cart => {
