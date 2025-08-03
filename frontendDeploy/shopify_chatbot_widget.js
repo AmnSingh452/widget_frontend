@@ -387,6 +387,66 @@ function applyWidgetStyles(settings) {
     }
 })();
 
+// --- BEGIN JARVIS 2.0 MULTI-TENANT INIT PATCH ---
+/*
+ * Dynamic shop domain detection and config initialization
+ */
+(function() {
+    // Detect shop domain from multiple sources
+    const detectShopDomain = () => {
+        if (window.SHOPIFY_CHATBOT_CONFIG?.shop_domain) return window.SHOPIFY_CHATBOT_CONFIG.shop_domain;
+        if (window.SHOP_DOMAIN) return window.SHOP_DOMAIN;
+        if (window.Shopify?.shop) return window.Shopify.shop;
+        if (window.shop?.permanent_domain) return window.shop.permanent_domain;
+        const hostname = window.location.hostname;
+        if (hostname.includes('.myshopify.com')) return hostname;
+        const metaShopDomain = document.querySelector('meta[name="shopify-shop-domain"]');
+        if (metaShopDomain) return metaShopDomain.content;
+        return null;
+    };
+    window.SHOP_DOMAIN = detectShopDomain();
+    // Dynamic config fetch
+    window.initializeJarvisConfig = async function() {
+        if (!window.SHOP_DOMAIN) return false;
+        try {
+            const configEndpoint = window.SHOPIFY_CHATBOT_CONFIG?.config_endpoint || `https://jarvis2-0-djg1.onrender.com/api/widget-config?shop=${window.SHOP_DOMAIN}`;
+            const response = await fetch(configEndpoint);
+            const configData = await response.json();
+            if (configData.success && configData.config) {
+                window.API_BASE_URL = configData.config.api_endpoints.chat;
+                window.HISTORY_API_URL = configData.config.api_endpoints.session;
+                window.CUSTOMER_UPDATE_URL = configData.config.api_endpoints.customer_update;
+                window.RECOMMENDATIONS_API_URL = configData.config.api_endpoints.recommendations;
+                window.DISCOUNT_API_URL = configData.config.api_endpoints.abandoned_cart_discount;
+                return true;
+            }
+        } catch (error) {
+            // Fallbacks
+            const fallbackEndpoints = window.SHOPIFY_CHATBOT_CONFIG?.api_endpoints || {
+                chat: "https://cartrecover-bot.onrender.com/api/chat",
+                recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
+                abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount",
+                session: "https://cartrecover-bot.onrender.com/api/session",
+                customer_update: "https://cartrecover-bot.onrender.com/api/customer/update"
+            };
+            window.API_BASE_URL = fallbackEndpoints.chat;
+            window.HISTORY_API_URL = fallbackEndpoints.session;
+            window.CUSTOMER_UPDATE_URL = fallbackEndpoints.customer_update;
+            window.RECOMMENDATIONS_API_URL = fallbackEndpoints.recommendations;
+            window.DISCOUNT_API_URL = fallbackEndpoints.abandoned_cart_discount;
+            return true;
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await window.initializeJarvisConfig();
+        });
+    } else {
+        window.initializeJarvisConfig();
+    }
+})();
+// --- END PATCH ---
+
 // Configuration
 const API_BASE_URL = 'https://cartrecover-bot.onrender.com/api/chat';
 const HISTORY_API_URL = 'https://cartrecover-bot.onrender.com/api/session';
@@ -435,7 +495,7 @@ async function updateCustomerInfo(name) {
         const response = await fetch(CUSTOMER_UPDATE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, session_id: sessionId, shop: SHOP_DOMAIN }),
+            body: JSON.stringify({ name, session_id: sessionId, shop_domain: SHOP_DOMAIN }),
         });
         const data = await response.json();
         if (data.success) {
@@ -614,32 +674,39 @@ async function sendMessage() {
     scrollToBottom();
     showTypingIndicator();
     try {
-        const response = await fetch(API_BASE_URL, {
+        // Always use window.API_BASE_URL and include shop_domain in payload
+        const payload = {
+            message: message,
+            session_id: sessionId,
+            shop_domain: window.SHOP_DOMAIN
+        };
+        console.log('📝 Request payload:', payload);
+        const response = await fetch(window.API_BASE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, session_id: sessionId, shop: SHOP_DOMAIN }),
+            body: JSON.stringify(payload),
         });
         hideTypingIndicator();
         const data = await response.json();
         console.log('Raw API response:', data);
 
         // Use data.data for the actual response
-        const payload = data.data || {};
-        if (payload.response && payload.session_id) {
+        const respPayload = data.data || {};
+        if (respPayload.response && respPayload.session_id) {
             console.log('Entering SUCCESS block');
-            sessionId = payload.session_id;
+            sessionId = respPayload.session_id;
             localStorage.setItem('shopifyChatbotSessionId', sessionId);
             console.log('Session ID confirmed from backend:', sessionId);
 
             // Update customer info if it's in the response
-            if (payload.customer_info && payload.customer_info.name) {
-                customerName = payload.customer_info.name;
+            if (respPayload.customer_info && respPayload.customer_info.name) {
+                customerName = respPayload.customer_info.name;
                 localStorage.setItem('shopifyChatbotCustomerName', customerName);
                 console.log('Customer name updated from backend:', customerName);
             }
 
             // Render the messages
-            renderMessages(payload.history);
+            renderMessages(respPayload.history);
 
             // Hesitation-triggered discount logic
             if (!localStorage.getItem('shopifyChatbotDiscountOffered')) {
@@ -710,7 +777,7 @@ async function fetchAndShowRecommendations(productIds = [], customerId = null) {
         const response = await fetch(RECOMMENDATIONS_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: productIds, customer_id: customerId, shop: SHOP_DOMAIN })
+            body: JSON.stringify({ product_ids: productIds, customer_id: customerId, shop_domain: SHOP_DOMAIN })
         });
         const data = await response.json();
         console.log('Recommendations API response:', data); // Debug log
@@ -775,7 +842,7 @@ async function offerAbandonedCartDiscount() {
     const response = await fetch(DISCOUNT_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId, shop: SHOP_DOMAIN })
+        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId, shop_domain: SHOP_DOMAIN })
     });
     const data = await response.json();
     if (data.discount_code) {
