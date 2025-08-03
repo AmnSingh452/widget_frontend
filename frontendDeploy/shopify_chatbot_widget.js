@@ -269,7 +269,10 @@ function applyWidgetStyles(settings) {
         <button id="chat-toggle-button" class="chat-button">${widgetSettings.buttonIcon}</button>
         <div id="chat-window" class="chat-window chat-window-hidden">
             <div class="chat-header">
-                <span>${widgetSettings.headerText}</span>
+                <span style="display:flex;align-items:center;gap:10px;">
+                    <span id="smartbot-avatar">${getRobotAvatarSVG()}</span>
+                    <span>${widgetSettings.headerText}</span>
+                </span>
                 <button id="chat-close-button" class="chat-close-button">&times;</button>
             </div>
             <div id="chat-messages" class="chat-messages"></div>
@@ -337,6 +340,50 @@ function applyWidgetStyles(settings) {
             window.chatInput.focus();
             checkCartAndPrompt();
         }, 500);
+    }
+})();
+
+// Add floating welcome popup
+(function addWelcomePopup() {
+    if (!document.getElementById('smartbot-welcome-popup')) {
+        const popup = document.createElement('div');
+        popup.id = 'smartbot-welcome-popup';
+        popup.style.position = 'fixed';
+        popup.style.zIndex = '10001';
+        popup.style.maxWidth = '260px';
+        popup.style.bottom = '100px';
+        popup.style.right = '36px';
+        popup.style.background = 'rgba(255,255,255,0.95)';
+        popup.style.borderRadius = '18px';
+        popup.style.boxShadow = '0 4px 24px rgba(0,0,0,0.18)';
+        popup.style.padding = '18px 22px';
+        popup.style.fontSize = '1.08em';
+        popup.style.color = '#222';
+        popup.style.display = 'flex';
+        popup.style.alignItems = 'center';
+        popup.style.gap = '14px';
+        popup.style.cursor = 'pointer';
+        popup.style.transition = 'opacity 0.3s';
+        popup.innerHTML = `
+            <span style="font-size:2em;">🤖</span>
+            <span>How can I help you?</span>
+        `;
+        popup.onclick = function() {
+            document.getElementById('chat-toggle-button').click();
+            popup.style.opacity = '0';
+            setTimeout(() => popup.remove(), 300);
+        };
+        document.body.appendChild(popup);
+        setTimeout(() => {
+            popup.style.opacity = '1';
+        }, 400);
+        // Auto-hide after 8 seconds if not clicked
+        setTimeout(() => {
+            if (document.body.contains(popup)) {
+                popup.style.opacity = '0';
+                setTimeout(() => popup.remove(), 300);
+            }
+        }, 8000);
     }
 })();
 
@@ -760,4 +807,17 @@ function showTypingIndicator() {
 function hideTypingIndicator() {
     const typingDiv = document.getElementById('smartbot-typing-indicator');
     if (typingDiv) typingDiv.remove();
+}
+
+// Add 3D robot avatar to chat header
+// You can use a simple SVG for now, or replace with a 3D model viewer (e.g. <model-viewer> for glTF/GLB)
+function getRobotAvatarSVG() {
+    return `<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="18" cy="20" rx="14" ry="12" fill="#e9f3ff" stroke="#007bff" stroke-width="2"/>
+        <ellipse cx="18" cy="16" rx="10" ry="8" fill="#fff" stroke="#0056b3" stroke-width="2"/>
+        <circle cx="14" cy="16" r="2" fill="#007bff"/>
+        <circle cx="22" cy="16" r="2" fill="#007bff"/>
+        <rect x="15" y="22" width="6" height="2" rx="1" fill="#0056b3"/>
+        <rect x="16" y="10" width="4" height="2" rx="1" fill="#ffd700"/>
+    </svg>`;
 }
