@@ -448,13 +448,31 @@ function applyWidgetStyles(settings) {
 // --- END PATCH ---
 
 // Configuration
-const API_BASE_URL = 'https://cartrecover-bot.onrender.com/api/chat';
-const HISTORY_API_URL = 'https://cartrecover-bot.onrender.com/api/session';
-const CUSTOMER_UPDATE_URL = 'https://cartrecover-bot.onrender.com/api/customer/update';
-const RECOMMENDATIONS_API_URL = 'https://cartrecover-bot.onrender.com/api/recommendations'; // <-- Replace with your actual backend URL
-const DISCOUNT_API_URL = 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount';
+function getApiUrls() {
+    const config = window.SHOPIFY_CHATBOT_CONFIG;
+    if (config && config.use_proxy && config.api_endpoints) {
+        return {
+            chat: config.api_endpoints.chat,
+            session: config.api_endpoints.session,
+            customer_update: config.api_endpoints.customer_update,
+            recommendations: config.api_endpoints.recommendations || `${config.proxy_base_url}/api/recommendations`,
+            abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount
+        };
+    }
+    return {
+        chat: 'https://cartrecover-bot.onrender.com/api/chat',
+        session: 'https://cartrecover-bot.onrender.com/api/session',
+        customer_update: 'https://cartrecover-bot.onrender.com/api/customer/update',
+        recommendations: 'https://cartrecover-bot.onrender.com/api/recommendations',
+        abandoned_cart_discount: 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
+    };
+}
+const API_URLS = getApiUrls();
 let sessionId = localStorage.getItem('shopifyChatbotSessionId') || null;
 let customerName = localStorage.getItem('shopifyChatbotCustomerName') || null;
+console.log('🔧 Widget using API URLs:', API_URLS);
+console.log('🏪 Shop Domain:', window.SHOP_DOMAIN);
+console.log('📡 CORS Proxy Mode:', window.SHOPIFY_CHATBOT_CONFIG?.use_proxy ? 'ENABLED' : 'DISABLED');
 
 // Hesitation phrases for discount trigger
 const HESITATION_PHRASES = [
@@ -492,10 +510,14 @@ async function updateCustomerInfo(name) {
         return;
     }
     try {
-        const response = await fetch(CUSTOMER_UPDATE_URL, {
+        const response = await fetch(API_URLS.customer_update, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, session_id: sessionId, shop_domain: SHOP_DOMAIN }),
+            body: JSON.stringify({
+                session_id: sessionId,
+                name: name,
+                shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
+            }),
         });
         const data = await response.json();
         if (data.success) {
@@ -568,7 +590,10 @@ async function loadChatHistory() {
     console.log('loadChatHistory called. Current sessionId:', sessionId);
     if (sessionId) {
         try {
-            const response = await fetch(`${HISTORY_API_URL}/${sessionId}`);
+            const response = await fetch(`${API_URLS.session}/${sessionId}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            });
             const data = await response.json();
             // Check if the history array exists and is not empty
             if (data && data.history && data.history.length > 0) {
@@ -651,9 +676,7 @@ async function sendMessage() {
         }
         return;
     }
-    // Clear input immediately
     document.getElementById('chat-input').value = '';
-    // Add user message to UI
     if (chatMessages) {
         const userDiv = document.createElement('div');
         userDiv.className = 'message user-message';
@@ -661,20 +684,20 @@ async function sendMessage() {
         chatMessages.appendChild(userDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-    // Show typing indicator
     if (window.showTypingIndicator) {
         window.showTypingIndicator();
     }
     try {
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
-        console.log('📡 API endpoint:', window.API_BASE_URL || 'https://cartrecover-bot.onrender.com/api/chat');
+        console.log('📡 API endpoint:', API_URLS.chat);
         const payload = {
             message: message,
-            session_id: window.sessionId || localStorage.getItem('shopifyChatbotSessionId'),
-            shop_domain: window.SHOP_DOMAIN
+            session_id: sessionId,
+            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
+            customer_name: customerName
         };
         console.log('📝 Request payload:', payload);
-        const response = await fetch(window.API_BASE_URL || 'https://cartrecover-bot.onrender.com/api/chat', {
+        const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -687,19 +710,15 @@ async function sendMessage() {
         }
         const data = await response.json();
         console.log('📡 API response:', data);
-        // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
         }
-        // Handle response
         const payload_data = data.data || data;
         if (payload_data.response) {
-            // Update session ID if provided
             if (payload_data.session_id) {
                 window.sessionId = payload_data.session_id;
                 localStorage.setItem('shopifyChatbotSessionId', payload_data.session_id);
             }
-            // Add bot response to UI
             if (chatMessages) {
                 const botDiv = document.createElement('div');
                 botDiv.className = 'message bot-message';
@@ -712,11 +731,9 @@ async function sendMessage() {
         }
     } catch (error) {
         console.error('❌ Send message error:', error);
-        // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
         }
-        // Show error message
         if (chatMessages) {
             const errorDiv = document.createElement('div');
             errorDiv.className = 'message bot-message';
@@ -760,13 +777,17 @@ async function fetchAndShowRecommendations(productIds = [], customerId = null) {
         return;
     }
     try {
-        const response = await fetch(RECOMMENDATIONS_API_URL, {
+        const response = await fetch(API_URLS.recommendations, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ product_ids: productIds, customer_id: customerId, shop_domain: SHOP_DOMAIN })
+            body: JSON.stringify({
+                product_ids: productIds,
+                customer_id: customerId,
+                shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
+            })
         });
         const data = await response.json();
-        console.log('Recommendations API response:', data); // Debug log
+        console.log('Recommendations API response:', data);
         if (data.recommendations && data.recommendations.length > 0) {
             showBotMessage("You may also like:");
             data.recommendations.forEach(product => {
@@ -825,10 +846,14 @@ async function offerAbandonedCartDiscount() {
         showBotMessage("Error: Shop domain or session not found. Cannot offer discount.");
         return;
     }
-    const response = await fetch(DISCOUNT_API_URL, {
+    const response = await fetch(API_URLS.abandoned_cart_discount, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discount_percentage: 10, session_id: sessionId, shop_domain: SHOP_DOMAIN })
+        body: JSON.stringify({
+            discount_percentage: 10,
+            session_id: sessionId,
+            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
+        })
     });
     const data = await response.json();
     if (data.discount_code) {
@@ -838,7 +863,6 @@ async function offerAbandonedCartDiscount() {
           <a href="https://${SHOPIFY_STORE_DOMAIN}/cart" target="_blank" style="color:#007bff;text-decoration:underline;">Click here to complete your purchase</a>!<br>
           <span style="color:#d9534f;font-size:0.95em;">⏰ Hurry! This code is valid for the next 1 hour or until you complete your purchase.</span>`
         );
-        // Optionally, add tracking here
     } else {
         showBotMessage("Sorry, there was an issue generating your discount code.");
     }
