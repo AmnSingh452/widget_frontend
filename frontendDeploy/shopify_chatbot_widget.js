@@ -69,14 +69,14 @@ function applyWidgetStyles(settings) {
 
     style.innerHTML = `
     #chat-toggle-button {
-        background: ${settings.primaryColor};
+        background: linear-gradient(135deg, ${settings.primaryColor} 60%, ${settings.secondaryColor} 100%);
         color: #fff;
         width: ${settings.buttonSize};
         height: ${settings.buttonSize};
         border-radius: 50%;
         border: none;
         font-size: 2em;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 24px rgba(0,0,0,0.18);
         position: fixed;
         z-index: 9999;
         cursor: pointer;
@@ -84,10 +84,16 @@ function applyWidgetStyles(settings) {
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s;
+        transition: background 0.2s, box-shadow 0.2s;
+        animation: smartbot-float 2.5s infinite ease-in-out;
+    }
+    @keyframes smartbot-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
     }
     #chat-toggle-button:hover {
-        background: ${settings.secondaryColor};
+        background: linear-gradient(135deg, ${settings.secondaryColor} 60%, ${settings.primaryColor} 100%);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22);
     }
     #chat-window {
         width: ${settings.windowWidth};
@@ -95,22 +101,26 @@ function applyWidgetStyles(settings) {
         position: fixed;
         ${posStyles}
         z-index: 10000;
-        background: #fff;
-        border-radius: 16px 16px 8px 8px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        background: rgba(255,255,255,0.85);
+        border-radius: 24px 24px 12px 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22);
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        backdrop-filter: blur(8px);
+        border: 1px solid #e0e0e0;
+        transition: box-shadow 0.2s;
     }
     .chat-header {
-        background: ${settings.primaryColor};
+        background: linear-gradient(90deg, ${settings.primaryColor} 80%, ${settings.secondaryColor} 100%);
         color: #fff;
         font-weight: bold;
-        padding: 12px 16px;
-        font-size: 1.1em;
+        padding: 16px 20px;
+        font-size: 1.2em;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        border-bottom: 1px solid #e0e0e0;
     }
     .chat-close-button {
         background: transparent;
@@ -118,67 +128,117 @@ function applyWidgetStyles(settings) {
         border: none;
         font-size: 1.5em;
         cursor: pointer;
+        transition: color 0.2s;
+    }
+    .chat-close-button:hover {
+        color: #ffd700;
     }
     .chat-messages {
         flex: 1;
-        padding: 12px;
+        padding: 16px;
         overflow-y: auto;
-        background: #f8f9fa;
+        background: rgba(248,249,250,0.7);
+        border-bottom: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
     .chat-input-area {
         display: flex;
-        padding: 8px;
-        background: #f1f1f1;
+        padding: 12px;
+        background: rgba(241,241,241,0.8);
+        border-top: 1px solid #e0e0e0;
     }
     .chat-input {
         flex: 1;
         border: 1px solid #ccc;
-        border-radius: 6px;
-        padding: 8px;
+        border-radius: 12px;
+        padding: 10px;
         font-size: 1em;
+        background: #fff;
+        transition: border 0.2s;
+    }
+    .chat-input:focus {
+        border: 1.5px solid ${settings.primaryColor};
+        outline: none;
     }
     .send-button {
-        background: ${settings.primaryColor};
+        background: linear-gradient(135deg, ${settings.primaryColor} 60%, ${settings.secondaryColor} 100%);
         color: #fff;
         border: none;
-        border-radius: 6px;
-        margin-left: 8px;
-        padding: 0 16px;
-        font-size: 1.2em;
+        border-radius: 12px;
+        margin-left: 10px;
+        padding: 0 20px;
+        font-size: 1.3em;
         cursor: pointer;
         transition: background 0.2s;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.10);
     }
     .send-button:hover {
-        background: ${settings.secondaryColor};
+        background: linear-gradient(135deg, ${settings.secondaryColor} 60%, ${settings.primaryColor} 100%);
     }
     .message.bot-message {
-        background: #e9f3ff;
+        background: rgba(233,243,255,0.85);
         color: #222;
-        border-radius: 8px 8px 8px 0;
-        margin-bottom: 8px;
-        padding: 8px 12px;
-        max-width: 85%;
+        border-radius: 16px 16px 16px 4px;
+        margin-bottom: 4px;
+        padding: 10px 16px;
+        max-width: 80%;
         align-self: flex-start;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        position: relative;
+        animation: smartbot-bubble-in 0.3s;
     }
     .message.user-message {
         background: ${settings.primaryColor}22;
         color: #222;
-        border-radius: 8px 8px 0 8px;
-        margin-bottom: 8px;
-        padding: 8px 12px;
-        max-width: 85%;
+        border-radius: 16px 16px 4px 16px;
+        margin-bottom: 4px;
+        padding: 10px 16px;
+        max-width: 80%;
         align-self: flex-end;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        position: relative;
+        animation: smartbot-bubble-in 0.3s;
+    }
+    @keyframes smartbot-bubble-in {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
     }
     .new-chat-button {
         background: #f1f1f1;
         color: #333;
         border: none;
-        border-radius: 0 0 8px 8px;
+        border-radius: 0 0 16px 16px;
         width: 100%;
-        padding: 10px 0;
+        padding: 12px 0;
         font-size: 1em;
         cursor: pointer;
         border-top: 1px solid #eee;
+        transition: background 0.2s;
+    }
+    .new-chat-button:hover {
+        background: #e0e0e0;
+    }
+    .smartbot-typing {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 0 0 8px;
+    }
+    .smartbot-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: ${settings.primaryColor};
+        opacity: 0.7;
+        animation: smartbot-dot-bounce 1.2s infinite;
+    }
+    .smartbot-dot:nth-child(2) { animation-delay: 0.2s; }
+    .smartbot-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes smartbot-dot-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
     }
     ${settings.customCSS || ''}
     `;
@@ -505,13 +565,14 @@ async function sendMessage() {
     renderMessages([...currentMessages, { role: 'user', content: message }]);
     chatInput.value = '';
     scrollToBottom();
-
+    showTypingIndicator();
     try {
         const response = await fetch(API_BASE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message, session_id: sessionId, shop: SHOP_DOMAIN }),
         });
+        hideTypingIndicator();
         const data = await response.json();
         console.log('Raw API response:', data);
 
@@ -554,6 +615,7 @@ async function sendMessage() {
             console.error('API Error:', data);
         }
     } catch (error) {
+        hideTypingIndicator();
         renderMessages([
             ...(chatMessages.children ? Array.from(chatMessages.children).map(div => ({
                 role: div.classList.contains('user-message') ? 'user' : 'bot',
@@ -680,4 +742,22 @@ async function offerAbandonedCartDiscount() {
     } else {
         showBotMessage("Sorry, there was an issue generating your discount code.");
     }
+}
+
+// Typing indicator functions
+function showTypingIndicator() {
+    const chatMessages = document.getElementById('chat-messages');
+    let typingDiv = document.getElementById('smartbot-typing-indicator');
+    if (!typingDiv) {
+        typingDiv = document.createElement('div');
+        typingDiv.id = 'smartbot-typing-indicator';
+        typingDiv.className = 'smartbot-typing';
+        typingDiv.innerHTML = '<span class="smartbot-dot"></span><span class="smartbot-dot"></span><span class="smartbot-dot"></span>';
+        chatMessages.appendChild(typingDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+}
+function hideTypingIndicator() {
+    const typingDiv = document.getElementById('smartbot-typing-indicator');
+    if (typingDiv) typingDiv.remove();
 }
