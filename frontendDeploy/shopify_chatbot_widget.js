@@ -638,106 +638,92 @@ chatCloseButton.addEventListener('click', () => {
 
 // Send message function
 async function sendMessage() {
-    const message = chatInput.value.trim();
-    if (!message || !SHOP_DOMAIN) {
-        if (!SHOP_DOMAIN) {
-            renderMessages([
-                { role: 'bot', content: "Error: Shop domain not found. Please reload the page or contact support." }
-            ]);
+    const message = document.getElementById('chat-input')?.value?.trim();
+    const chatMessages = document.getElementById('chat-messages');
+    if (!message) return;
+    if (!window.SHOP_DOMAIN) {
+        console.error('❌ Shop domain not available');
+        if (chatMessages) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message bot-message';
+            errorDiv.innerHTML = '❌ Error: Shop domain not found. Please reload the page.';
+            chatMessages.appendChild(errorDiv);
         }
         return;
     }
-
-    // Handle the case where the user is providing their name
-    const isNameSubmission = !customerName && chatMessages.textContent.includes("What's your name?");
-    if (isNameSubmission) {
-        const extractedName = extractNameFromInput(message);
-        if (extractedName) {
-            customerName = extractedName;
-            localStorage.setItem('shopifyChatbotCustomerName', customerName);
-            await updateCustomerInfo(customerName);
-            addInitialBotMessage(`Nice to meet you, ${customerName}! How can I help you?`);
-        } else {
-            addInitialBotMessage("Sorry, I didn't catch your name. Could you please tell me your first name?");
-        }
-        chatInput.value = '';
-        return;
-    }
-
+    // Clear input immediately
+    document.getElementById('chat-input').value = '';
     // Add user message to UI
-    const currentMessages = Array.from(chatMessages.children).map(div => ({
-        role: div.classList.contains('user-message') ? 'user' : 'bot',
-        content: div.textContent
-    }));
-    renderMessages([...currentMessages, { role: 'user', content: message }]);
-    chatInput.value = '';
-    scrollToBottom();
-    showTypingIndicator();
+    if (chatMessages) {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user-message';
+        userDiv.textContent = message;
+        chatMessages.appendChild(userDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    // Show typing indicator
+    if (window.showTypingIndicator) {
+        window.showTypingIndicator();
+    }
     try {
-        // Always use window.API_BASE_URL and include shop_domain in payload
+        console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
+        console.log('📡 API endpoint:', window.API_BASE_URL || 'https://cartrecover-bot.onrender.com/api/chat');
         const payload = {
             message: message,
-            session_id: sessionId,
+            session_id: window.sessionId || localStorage.getItem('shopifyChatbotSessionId'),
             shop_domain: window.SHOP_DOMAIN
         };
         console.log('📝 Request payload:', payload);
-        const response = await fetch(window.API_BASE_URL, {
+        const response = await fetch(window.API_BASE_URL || 'https://cartrecover-bot.onrender.com/api/chat', {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             body: JSON.stringify(payload),
         });
-        hideTypingIndicator();
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         const data = await response.json();
-        console.log('Raw API response:', data);
-
-        // Use data.data for the actual response
-        const respPayload = data.data || {};
-        if (respPayload.response && respPayload.session_id) {
-            console.log('Entering SUCCESS block');
-            sessionId = respPayload.session_id;
-            localStorage.setItem('shopifyChatbotSessionId', sessionId);
-            console.log('Session ID confirmed from backend:', sessionId);
-
-            // Update customer info if it's in the response
-            if (respPayload.customer_info && respPayload.customer_info.name) {
-                customerName = respPayload.customer_info.name;
-                localStorage.setItem('shopifyChatbotCustomerName', customerName);
-                console.log('Customer name updated from backend:', customerName);
+        console.log('📡 API response:', data);
+        // Hide typing indicator
+        if (window.hideTypingIndicator) {
+            window.hideTypingIndicator();
+        }
+        // Handle response
+        const payload_data = data.data || data;
+        if (payload_data.response) {
+            // Update session ID if provided
+            if (payload_data.session_id) {
+                window.sessionId = payload_data.session_id;
+                localStorage.setItem('shopifyChatbotSessionId', payload_data.session_id);
             }
-
-            // Render the messages
-            renderMessages(respPayload.history);
-
-            // Hesitation-triggered discount logic
-            if (!localStorage.getItem('shopifyChatbotDiscountOffered')) {
-                const lowerMsg = message.toLowerCase();
-                if (HESITATION_PHRASES.some(phrase => lowerMsg.includes(phrase))) {
-                    offerAbandonedCartDiscount();
-                    localStorage.setItem('shopifyChatbotDiscountOffered', 'true');
-                }
+            // Add bot response to UI
+            if (chatMessages) {
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message bot-message';
+                botDiv.innerHTML = payload_data.response;
+                chatMessages.appendChild(botDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         } else {
-            console.log('Entering ERROR block');
-            const errorMessage = data.message || 'Unknown error occurred';
-            renderMessages([
-                ...(chatMessages.children ? Array.from(chatMessages.children).map(div => ({
-                    role: div.classList.contains('user-message') ? 'user' : 'bot',
-                    content: div.textContent
-                })) : []),
-                { role: 'bot', content: `Error from chatbot: ${errorMessage}` }
-            ]);
-            console.error('API Error:', data);
+            throw new Error('No response content received');
         }
     } catch (error) {
-        hideTypingIndicator();
-        renderMessages([
-            ...(chatMessages.children ? Array.from(chatMessages.children).map(div => ({
-                role: div.classList.contains('user-message') ? 'user' : 'bot',
-                content: div.textContent
-            })) : []),
-            { role: 'bot', content: "Error contacting chatbot." }
-        ]);
-        console.error('Fetch error:', error);
+        console.error('❌ Send message error:', error);
+        // Hide typing indicator
+        if (window.hideTypingIndicator) {
+            window.hideTypingIndicator();
+        }
+        // Show error message
+        if (chatMessages) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message bot-message';
+            errorDiv.innerHTML = `❌ Connection error: ${error.message}. Please check your internet connection and try again.`;
+            chatMessages.appendChild(errorDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
     }
 }
 
