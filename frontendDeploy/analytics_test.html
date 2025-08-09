@@ -84,6 +84,8 @@
             <h2>3. Analytics Events Log</h2>
             <button onclick="clearAnalyticsLog()">Clear Log</button>
             <button onclick="exportAnalyticsLog()">Export Log</button>
+            <button onclick="showLocalStorageEvents()">Show Local Storage</button>
+            <button onclick="clearLocalStorage()">Clear Local Storage</button>
             <div id="analytics-events" class="console-log">
                 Analytics events will appear here...
             </div>
@@ -221,7 +223,8 @@
             const data = {
                 exportTime: new Date().toISOString(),
                 totalEvents: analyticsEvents.length,
-                events: analyticsEvents
+                events: analyticsEvents,
+                localStorageEvents: getLocalAnalyticsEvents ? getLocalAnalyticsEvents() : []
             };
             
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -233,6 +236,45 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+        
+        function showLocalStorageEvents() {
+            if (typeof getLocalAnalyticsEvents === 'function') {
+                const localEvents = getLocalAnalyticsEvents();
+                if (localEvents.length > 0) {
+                    updateStatus('test-status', `✅ Found ${localEvents.length} events in local storage`, 'success');
+                    console.log('📦 Local storage events:', localEvents);
+                    
+                    // Display in analytics events log
+                    const eventsDiv = document.getElementById('analytics-events');
+                    eventsDiv.innerHTML = '<h4>Local Storage Events:</h4>' + 
+                        localEvents.map(event => `
+                            <div class="analytics-event">
+                                <strong>${event.type}</strong> at ${event.timestamp}
+                                <br>Shop: ${event.shopDomain}
+                                <br>Session: ${event.sessionId || 'N/A'}
+                                ${event.customerName ? '<br>Customer: ' + event.customerName : ''}
+                                ${event.message ? '<br>Message: ' + event.message : ''}
+                                ${event.responseTime ? '<br>Response Time: ' + event.responseTime + 'ms' : ''}
+                                ${event.rating ? '<br>Rating: ' + event.rating + '/5' : ''}
+                                ${event.orderValue ? '<br>Order Value: $' + event.orderValue : ''}
+                            </div>
+                        `).join('');
+                } else {
+                    updateStatus('test-status', '⚠️ No events found in local storage', 'warning');
+                }
+            } else {
+                updateStatus('test-status', '❌ getLocalAnalyticsEvents function not found', 'error');
+            }
+        }
+        
+        function clearLocalStorage() {
+            if (typeof clearLocalAnalyticsEvents === 'function') {
+                clearLocalAnalyticsEvents();
+                updateStatus('test-status', '✅ Local storage cleared', 'success');
+            } else {
+                updateStatus('test-status', '❌ clearLocalAnalyticsEvents function not found', 'error');
+            }
         }
         
         // Initialize

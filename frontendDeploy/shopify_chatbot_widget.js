@@ -548,7 +548,9 @@ async function trackAnalyticsEvent(eventType, data = {}) {
 
         console.log('📊 Analytics Event:', eventType, payload);
 
-        const response = await fetch(`${JARVIS_API_URL}/api/analytics`, {
+        // Try to send to analytics endpoint
+        const analyticsUrl = `${JARVIS_API_URL}/api/analytics`;
+        const response = await fetch(analyticsUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -558,16 +560,67 @@ async function trackAnalyticsEvent(eventType, data = {}) {
         });
 
         if (!response.ok) {
-            console.warn('⚠️ Analytics tracking failed:', response.status);
+            // If analytics endpoint fails, log locally for now
+            console.warn(`⚠️ Analytics tracking failed (${response.status}):`, response.statusText);
+            console.log('📊 Analytics Event stored locally:', payload);
+            
+            // Store in localStorage as fallback
+            const localAnalytics = JSON.parse(localStorage.getItem('jarvis_analytics_events') || '[]');
+            localAnalytics.push(payload);
+            // Keep only last 50 events
+            if (localAnalytics.length > 50) {
+                localAnalytics.splice(0, localAnalytics.length - 50);
+            }
+            localStorage.setItem('jarvis_analytics_events', JSON.stringify(localAnalytics));
+        } else {
+            console.log('✅ Analytics event sent successfully');
         }
     } catch (error) {
-        console.warn('⚠️ Analytics tracking error:', error);
+        console.warn('⚠️ Analytics tracking error:', {
+            message: error.message,
+            stack: error.stack,
+            eventType: eventType,
+            shopDomain: shopDomain
+        });
+        
+        // Fallback: store locally
+        try {
+            const payload = {
+                type: eventType,
+                shopDomain: shopDomain,
+                sessionId: analyticsSessionId,
+                timestamp: new Date().toISOString(),
+                ...data
+            };
+            const localAnalytics = JSON.parse(localStorage.getItem('jarvis_analytics_events') || '[]');
+            localAnalytics.push(payload);
+            localStorage.setItem('jarvis_analytics_events', JSON.stringify(localAnalytics));
+            console.log('📊 Analytics event stored locally (fallback):', payload);
+        } catch (localError) {
+            console.error('❌ Analytics local storage failed:', localError);
+        }
     }
 }
 
 // Generate unique session ID for analytics
 function generateAnalyticsSessionId() {
     return 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+}
+
+// Get locally stored analytics events (for debugging/fallback)
+function getLocalAnalyticsEvents() {
+    try {
+        return JSON.parse(localStorage.getItem('jarvis_analytics_events') || '[]');
+    } catch (error) {
+        console.error('Error reading local analytics events:', error);
+        return [];
+    }
+}
+
+// Clear locally stored analytics events
+function clearLocalAnalyticsEvents() {
+    localStorage.removeItem('jarvis_analytics_events');
+    console.log('🧹 Local analytics events cleared');
 }
 
 // Hesitation phrases for discount trigger
