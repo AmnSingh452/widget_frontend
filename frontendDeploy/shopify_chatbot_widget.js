@@ -537,6 +537,13 @@ async function trackAnalyticsEvent(eventType, data = {}) {
 
     const shopDomain = window.SHOP_DOMAIN || SHOP_DOMAIN;
     
+    // Debug: Log session state
+    if (!analyticsSessionId) {
+        console.warn('⚠️ Analytics: No session ID available, creating one...');
+        analyticsSessionId = generateAnalyticsSessionId();
+        console.log('📊 Generated new analytics session:', analyticsSessionId);
+    }
+    
     try {
         const payload = {
             type: eventType,
@@ -783,13 +790,14 @@ chatToggleButton.addEventListener('click', () => {
         // Generate new analytics session if needed
         if (!analyticsSessionId) {
             analyticsSessionId = generateAnalyticsSessionId();
-            
-            // Track conversation started
-            trackAnalyticsEvent('conversation_started', {
-                customerName: customerName || 'Anonymous',
-                source: 'widget_button'
-            });
+            console.log('📊 Created analytics session:', analyticsSessionId);
         }
+        
+        // Track conversation started
+        trackAnalyticsEvent('conversation_started', {
+            customerName: customerName || 'Anonymous',
+            source: 'widget_button'
+        });
         
         loadChatHistory();
         chatInput.focus();
@@ -920,7 +928,13 @@ async function sendMessage() {
             throw new Error('No response content received');
         }
     } catch (error) {
-        console.error('❌ Send message error:', error);
+        console.error('❌ Send message error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            apiUrl: API_URLS.chat,
+            shopDomain: window.SHOP_DOMAIN || SHOP_DOMAIN
+        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
