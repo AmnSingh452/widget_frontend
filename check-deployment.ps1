@@ -54,5 +54,6 @@ Write-Host "`n🎯 Deployment URLs:" -ForegroundColor Green
 Write-Host "   Widget JS: https://widget-frontend-6mo6.onrender.com/shopify_chatbot_widget.js" -ForegroundColor Cyan
 Write-Host "   Widget CSS: https://widget-frontend-6mo6.onrender.com/shopify_chatbot_widget.css" -ForegroundColor Cyan
 Write-Host "   Test Page: https://widget-frontend-6mo6.onrender.com/test_deployment.html" -ForegroundColor Cyan
+Write-Host "   Analytics Test: https://widget-frontend-6mo6.onrender.com/analytics_test.html" -ForegroundColor Cyan
 
 Write-Host "`n✅ Deployment check complete!" -ForegroundColor Green

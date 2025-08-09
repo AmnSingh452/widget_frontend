@@ -522,10 +522,53 @@ function getApiUrls() {
 const API_URLS = getApiUrls();
 let sessionId = localStorage.getItem('shopifyChatbotSessionId') || null;
 let customerName = localStorage.getItem('shopifyChatbotCustomerName') || null;
+let analyticsSessionId = null; // For tracking conversation sessions
 
 console.log('🔧 Widget using API URLs:', API_URLS);
 console.log('🏪 Shop Domain:', window.SHOP_DOMAIN);
 console.log('📡 CORS Proxy Mode:', window.SHOPIFY_CHATBOT_CONFIG?.use_proxy ? 'ENABLED' : 'DISABLED');
+
+// Analytics tracking helper
+async function trackAnalyticsEvent(eventType, data = {}) {
+    if (!window.SHOP_DOMAIN && !SHOP_DOMAIN) {
+        console.warn('⚠️ Analytics: Shop domain not available for tracking');
+        return;
+    }
+
+    const shopDomain = window.SHOP_DOMAIN || SHOP_DOMAIN;
+    
+    try {
+        const payload = {
+            type: eventType,
+            shopDomain: shopDomain,
+            sessionId: analyticsSessionId,
+            timestamp: new Date().toISOString(),
+            ...data
+        };
+
+        console.log('📊 Analytics Event:', eventType, payload);
+
+        const response = await fetch(`${JARVIS_API_URL}/api/analytics`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            console.warn('⚠️ Analytics tracking failed:', response.status);
+        }
+    } catch (error) {
+        console.warn('⚠️ Analytics tracking error:', error);
+    }
+}
+
+// Generate unique session ID for analytics
+function generateAnalyticsSessionId() {
+    return 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+}
 
 // Hesitation phrases for discount trigger
 const HESITATION_PHRASES = [
@@ -684,6 +727,17 @@ function addInitialBotMessage(message) {
 chatToggleButton.addEventListener('click', () => {
     chatWindow.classList.toggle('chat-window-hidden');
     if (!chatWindow.classList.contains('chat-window-hidden')) {
+        // Generate new analytics session if needed
+        if (!analyticsSessionId) {
+            analyticsSessionId = generateAnalyticsSessionId();
+            
+            // Track conversation started
+            trackAnalyticsEvent('conversation_started', {
+                customerName: customerName || 'Anonymous',
+                source: 'widget_button'
+            });
+        }
+        
         loadChatHistory();
         chatInput.focus();
         checkCartAndPrompt();
@@ -693,6 +747,15 @@ chatToggleButton.addEventListener('click', () => {
 // New chat button event listener
 if (newChatButton) {
     newChatButton.addEventListener('click', () => {
+        // Track conversation ended before clearing
+        if (analyticsSessionId) {
+            trackAnalyticsEvent('conversation_ended', {
+                customerName: customerName || 'Anonymous',
+                sessionDuration: Date.now() - parseInt(analyticsSessionId.split('_')[2]),
+                endReason: 'new_chat_requested'
+            });
+        }
+        
         // Clear session and customer info from local storage
         localStorage.removeItem('shopifyChatbotSessionId');
         localStorage.removeItem('shopifyChatbotCustomerName');
@@ -701,6 +764,7 @@ if (newChatButton) {
         // Reset in-memory variables
         sessionId = null;
         customerName = null;
+        analyticsSessionId = null; // Reset analytics session
         
         // Clear the chat messages and load the initial prompt
         chatMessages.innerHTML = '';
@@ -743,6 +807,9 @@ async function sendMessage() {
     if (window.showTypingIndicator) {
         window.showTypingIndicator();
     }
+    
+    const messageStartTime = Date.now();
+    
     try {
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
         console.log('📡 API endpoint:', API_URLS.chat);
@@ -765,7 +832,17 @@ async function sendMessage() {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         const data = await response.json();
+        const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
+        
+        // Track message sent with response time
+        trackAnalyticsEvent('message_sent', {
+            message: message,
+            responseTime: responseTime,
+            customerName: customerName || 'Anonymous',
+            sessionId: sessionId,
+            botResponse: data.data?.response || data.response
+        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
@@ -960,4 +1037,23 @@ function getRobotAvatarSVG() {
         <rect x="15" y="22" width="6" height="2" rx="1" fill="#0056b3"/>
         <rect x="16" y="10" width="4" height="2" rx="1" fill="#ffd700"/>
     </svg>`;
+}
+
+// Optional Analytics Functions
+// Track conversions when a sale is detected
+function trackConversion(orderValue = 0) {
+    trackAnalyticsEvent('conversion_completed', {
+        customerName: customerName || 'Anonymous',
+        orderValue: orderValue,
+        conversionSource: 'chatbot_assistance'
+    });
+}
+
+// Track customer satisfaction rating
+function trackSatisfactionRating(rating) {
+    trackAnalyticsEvent('satisfaction_rated', {
+        customerName: customerName || 'Anonymous',
+        rating: rating, // 1-5 scale
+        sessionId: sessionId
+    });
 }
