@@ -1,0 +1,94 @@
+{
+  "timestamp": "2025-08-09T19:09:00.037Z",
+  "overallStatus": "ISSUES_DETECTED",
+  "summary": {
+    "PASS": 5,
+    "FAIL": 1,
+    "WARN": 2
+  },
+  "results": [
+    {
+      "timestamp": "2025-08-09T19:08:53.230Z",
+      "test": "FILE_ACCESS",
+      "status": "PASS",
+      "message": "/shopify_chatbot_widget.js accessible",
+      "details": {
+        "size": 35094,
+        "contentType": "application/javascript"
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:54.111Z",
+      "test": "FILE_ACCESS",
+      "status": "PASS",
+      "message": "/shopify_chatbot_widget.css accessible",
+      "details": {
+        "size": 5318,
+        "contentType": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:55.015Z",
+      "test": "FILE_ACCESS",
+      "status": "PASS",
+      "message": "/shopify_chatbot_widget.html accessible",
+      "details": {
+        "size": 1745,
+        "contentType": "text/html; charset=utf-8"
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:57.018Z",
+      "test": "SETTINGS_API",
+      "status": "PASS",
+      "message": "Widget settings API working",
+      "details": {
+        "hasSettings": true,
+        "isEnabled": true
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:58.064Z",
+      "test": "CHAT_API",
+      "status": "FAIL",
+      "message": "Chat API returned unexpected response",
+      "details": {
+        "status": 200,
+        "data": {
+          "success": false,
+          "message": "Failed to process chat request",
+          "data": null,
+          "error": "404: Shop not found"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:58.585Z",
+      "test": "RECOMMENDATIONS_API",
+      "status": "PASS",
+      "message": "Recommendations API working",
+      "details": {
+        "hasRecommendations": true
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:08:59.079Z",
+      "test": "DISCOUNT_API",
+      "status": "WARN",
+      "message": "Discount API returned non-200",
+      "details": {
+        "status": 405,
+        "data": {
+          "message": "Unexpected Server Error"
+        }
+      }
+    },
+    {
+      "timestamp": "2025-08-09T19:09:00.034Z",
+      "test": "CORS",
+      "status": "WARN",
+      "message": "CORS headers missing or incomplete",
+      "details": {}
+    }
+  ]
+}
