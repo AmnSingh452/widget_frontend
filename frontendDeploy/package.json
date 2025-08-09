@@ -1,0 +1,22 @@
+{
+  "name": "jarvis-widget-frontend",
+  "version": "1.0.0",
+  "description": "Jarvis AI Chatbot Widget for Shopify",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'Build complete'"
+  },
+  "keywords": ["shopify", "chatbot", "widget", "jarvis", "ai"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "serve-static": "^1.15.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
