@@ -785,8 +785,8 @@ function addInitialBotMessage(message) {
 
 // Toggle chat window visibility
 window.chatToggleButton.addEventListener('click', () => {
-    chatWindow.classList.toggle('chat-window-hidden');
-    if (!chatWindow.classList.contains('chat-window-hidden')) {
+    window.chatWindow.classList.toggle('chat-window-hidden');
+    if (!window.chatWindow.classList.contains('chat-window-hidden')) {
         // Generate new analytics session if needed
         if (!analyticsSessionId) {
             analyticsSessionId = generateAnalyticsSessionId();
@@ -800,7 +800,7 @@ window.chatToggleButton.addEventListener('click', () => {
         });
         
         loadChatHistory();
-        chatInput.focus();
+        window.chatInput.focus();
         checkCartAndPrompt();
     }
 });
