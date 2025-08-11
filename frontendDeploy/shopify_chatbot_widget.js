@@ -784,7 +784,7 @@ function addInitialBotMessage(message) {
 }
 
 // Toggle chat window visibility
-chatToggleButton.addEventListener('click', () => {
+window.chatToggleButton.addEventListener('click', () => {
     chatWindow.classList.toggle('chat-window-hidden');
     if (!chatWindow.classList.contains('chat-window-hidden')) {
         // Generate new analytics session if needed
