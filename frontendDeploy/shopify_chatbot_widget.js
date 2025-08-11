@@ -799,6 +799,7 @@ async function sendMessage() {
         }
         return;
     }
+    
     // Clear input immediately
     document.getElementById('chat-input').value = '';
     // Add user message to UI
