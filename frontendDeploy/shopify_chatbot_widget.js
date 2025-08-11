@@ -778,66 +778,11 @@ async function loadChatHistory() {
 
 function addInitialBotMessage(message) {
     renderMessages([{
-        role: 'bot',
+role: 'bot',
         content: message
     }]);
 }
-
-// Toggle chat window visibility
-window.chatToggleButton.addEventListener('click', () => {
-    window.chatWindow.classList.toggle('chat-window-hidden');
-    if (!window.chatWindow.classList.contains('chat-window-hidden')) {
-        // Generate new analytics session if needed
-        if (!analyticsSessionId) {
-            analyticsSessionId = generateAnalyticsSessionId();
-            console.log('📊 Created analytics session:', analyticsSessionId);
-        }
-        
-        // Track conversation started
-        trackAnalyticsEvent('conversation_started', {
-            customerName: customerName || 'Anonymous',
-            source: 'widget_button'
-        });
-        
-        loadChatHistory();
-        window.chatInput.focus();
-        checkCartAndPrompt();
-    }
-});
-
-// New chat button event listener
-if (newChatButton) {
-    newChatButton.addEventListener('click', () => {
-        // Track conversation ended before clearing
-        if (analyticsSessionId) {
-            trackAnalyticsEvent('conversation_ended', {
-                customerName: customerName || 'Anonymous',
-                sessionDuration: Date.now() - parseInt(analyticsSessionId.split('_')[2]),
-                endReason: 'new_chat_requested'
-            });
-        }
-        
-        // Clear session and customer info from local storage
-        localStorage.removeItem('shopifyChatbotSessionId');
-        localStorage.removeItem('shopifyChatbotCustomerName');
-        localStorage.removeItem('shopifyChatbotDiscountOffered');
-        
-        // Reset in-memory variables
-        sessionId = null;
-        customerName = null;
-        analyticsSessionId = null; // Reset analytics session
-        
-        // Clear the chat messages and load the initial prompt
-        chatMessages.innerHTML = '';
-        loadChatHistory();
-        
-        console.log('New chat started. Session cleared.');
-    });
-}
-
-chatCloseButton.addEventListener('click', () => {
-    chatWindow.classList.add('chat-window-hidden');
-});
+// ...existing code...
 
 // Send message function
 async function sendMessage() {
