@@ -822,28 +822,29 @@ async function sendMessage() {
     try {
         // Only send session_id if it was previously returned by backend
         // Build payload with only required fields in snake_case
+        let validMessage = typeof message === 'string' ? message.trim() : '';
+        let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
+        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
+
+        // If message or shop_domain is missing, abort and show error
+        if (!validMessage || !validShopDomain) {
+            console.error('❌ Required fields missing. Aborting fetch.');
+            showBotMessage('❌ Error: Message and shop domain are required.');
+            if (window.hideTypingIndicator) window.hideTypingIndicator();
+            return;
+        }
+
         let payload = {
-            message: message,
-            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
-            session_id: window.sessionId || null
+            message: validMessage,
+            shop_domain: validShopDomain,
+            session_id: validSessionId
         };
-        // Remove any extra fields if present (defensive)
-        Object.keys(payload).forEach(key => {
-            if (!["message", "shop_domain", "session_id"].includes(key)) {
-                delete payload[key];
-            }
-        });
-        console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
+
+        console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
         const stringifiedPayload = JSON.stringify(payload);
         console.log('📝 Request payload (JSON):', stringifiedPayload);
-        if (!stringifiedPayload || stringifiedPayload === '{}' || stringifiedPayload === 'null') {
-            console.error('❌ Payload is empty or invalid. Aborting fetch.');
-            showBotMessage('❌ Error: Message could not be sent due to empty payload.');
-            if (window.hideTypingIndicator) window.hideTypingIndicator();
-            return;
-        }
 
 
         const response = await fetch(API_URLS.chat, {
