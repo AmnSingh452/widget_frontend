@@ -566,6 +566,8 @@ async function trackAnalyticsEvent(eventType, data = {}) {
             body: JSON.stringify(payload)
         });
 
+
+
         if (!response.ok) {
             // If analytics endpoint fails, log locally for now
             console.warn(`⚠️ Analytics tracking failed (${response.status}):`, response.statusText);
@@ -799,7 +801,7 @@ async function sendMessage() {
         }
         return;
     }
-    
+
     // Clear input immediately
     document.getElementById('chat-input').value = '';
     // Add user message to UI
@@ -897,16 +899,6 @@ async function sendMessage() {
 }
 
 // Event listeners for sending messages
-if (chatSendButton) {
-    chatSendButton.addEventListener('click', sendMessage);
-}
-if (chatInput) {
-    chatInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
-    });
-}
 
 // Optionally, load history or show initial message when the script loads
 // window.addEventListener('load', () => {
