@@ -821,14 +821,18 @@ async function sendMessage() {
     
     try {
         // Only send session_id if it was previously returned by backend
+        // Build payload with only required fields in snake_case
         let payload = {
             message: message,
-            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
+            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
+            session_id: window.sessionId || null
         };
-        // Only include session_id if it was set from a previous backend response
-        if (window.sessionId) {
-            payload.session_id = window.sessionId;
-        }
+        // Remove any extra fields if present (defensive)
+        Object.keys(payload).forEach(key => {
+            if (!["message", "shop_domain", "session_id"].includes(key)) {
+                delete payload[key];
+            }
+        });
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
@@ -841,7 +845,7 @@ async function sendMessage() {
             return;
         }
 
-        
+
         const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
