@@ -820,27 +820,18 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
-        // Ensure sessionId is always set
-        if (!sessionId) {
-            sessionId = generateAnalyticsSessionId();
-            window.sessionId = sessionId;
-            localStorage.setItem('shopifyChatbotSessionId', sessionId);
-        }
-        // Ensure customerName is always set
-        if (!customerName) {
-            customerName = 'Anonymous';
-            localStorage.setItem('shopifyChatbotCustomerName', customerName);
-        }
-        console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
-        console.log('📡 API endpoint:', API_URLS.chat);
-        // Build payload to match backend format
-        const payload = {
+        // Only send session_id if it was previously returned by backend
+        let payload = {
             message: message,
             shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
         };
-        if (sessionId) {
-            payload.session_id = sessionId;
+        // Only include session_id if it was set from a previous backend response
+        if (window.sessionId) {
+            payload.session_id = window.sessionId;
         }
+        console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
+        console.log('📡 API endpoint:', API_URLS.chat);
+        console.log('📝 Request payload:', payload);
         console.log('📝 Request payload:', payload);
         const response = await fetch(API_URLS.chat, {
             method: "POST",
