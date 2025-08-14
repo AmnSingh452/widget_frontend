@@ -826,7 +826,7 @@ async function sendMessage() {
             message: message,
             session_id: sessionId,
             shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
-            customer_name: customerName
+            customer_name: customerName || 'Anonymous'
         };
         console.log('📝 Request payload:', payload);
         const response = await fetch(API_URLS.chat, {
