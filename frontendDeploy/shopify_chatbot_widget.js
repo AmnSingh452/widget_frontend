@@ -831,8 +831,15 @@ async function sendMessage() {
         }
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
         console.log('📡 API endpoint:', API_URLS.chat);
-        console.log('📝 Request payload:', payload);
-        console.log('📝 Request payload:', payload);
+        console.log('📝 Request payload (object):', payload);
+        const stringifiedPayload = JSON.stringify(payload);
+        console.log('📝 Request payload (JSON):', stringifiedPayload);
+        if (!stringifiedPayload || stringifiedPayload === '{}' || stringifiedPayload === 'null') {
+            console.error('❌ Payload is empty or invalid. Aborting fetch.');
+            showBotMessage('❌ Error: Message could not be sent due to empty payload.');
+            if (window.hideTypingIndicator) window.hideTypingIndicator();
+            return;
+        }
         const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
