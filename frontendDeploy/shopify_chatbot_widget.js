@@ -833,12 +833,14 @@ async function sendMessage() {
         }
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
         console.log('📡 API endpoint:', API_URLS.chat);
+        // Build payload to match backend format
         const payload = {
             message: message,
-            session_id: sessionId,
-            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
-            customer_name: customerName
+            shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN
         };
+        if (sessionId) {
+            payload.session_id = sessionId;
+        }
         console.log('📝 Request payload:', payload);
         const response = await fetch(API_URLS.chat, {
             method: "POST",
