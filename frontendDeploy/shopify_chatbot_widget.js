@@ -840,6 +840,8 @@ async function sendMessage() {
             if (window.hideTypingIndicator) window.hideTypingIndicator();
             return;
         }
+
+        
         const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
