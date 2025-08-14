@@ -823,6 +823,7 @@ async function sendMessage() {
         // Ensure sessionId is always set
         if (!sessionId) {
             sessionId = generateAnalyticsSessionId();
+            window.sessionId = sessionId;
             localStorage.setItem('shopifyChatbotSessionId', sessionId);
         }
         // Ensure customerName is always set
