@@ -820,13 +820,23 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
+        // Ensure sessionId is always set
+        if (!sessionId) {
+            sessionId = generateAnalyticsSessionId();
+            localStorage.setItem('shopifyChatbotSessionId', sessionId);
+        }
+        // Ensure customerName is always set
+        if (!customerName) {
+            customerName = 'Anonymous';
+            localStorage.setItem('shopifyChatbotCustomerName', customerName);
+        }
         console.log('🚀 Sending message with shop domain:', window.SHOP_DOMAIN);
         console.log('📡 API endpoint:', API_URLS.chat);
         const payload = {
             message: message,
             session_id: sessionId,
             shop_domain: window.SHOP_DOMAIN || SHOP_DOMAIN,
-            customer_name: customerName || 'Anonymous'
+            customer_name: customerName
         };
         console.log('📝 Request payload:', payload);
         const response = await fetch(API_URLS.chat, {
