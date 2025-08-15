@@ -863,13 +863,13 @@ async function sendMessage() {
         console.log('📡 API response:', data);
         
         // Track message sent with response time
-        trackAnalyticsEvent('message_sent', {
-            message: message,
-            responseTime: responseTime,
-            customerName: customerName || 'Anonymous',
-            sessionId: sessionId,
-            botResponse: data.data?.response || data.response
-        });
+        // trackAnalyticsEvent('message_sent', {
+        //     message: message,
+        //     responseTime: responseTime,
+        //     customerName: customerName || 'Anonymous',
+        //     sessionId: sessionId,
+        //     botResponse: data.data?.response || data.response
+        // });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
