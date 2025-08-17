@@ -547,8 +547,8 @@ async function trackAnalyticsEvent(eventType, data = {}) {
     try {
         const payload = {
             type: eventType,
-            shopDomain: shopDomain,
-            sessionId: analyticsSessionId,
+            shop_domain: shopDomain,
+            session_id: analyticsSessionId,
             timestamp: new Date().toISOString(),
             ...data
         };
@@ -863,13 +863,13 @@ async function sendMessage() {
         console.log('📡 API response:', data);
         
         // Track message sent with response time
-        // trackAnalyticsEvent('message_sent', {
-        //     message: message,
-        //     responseTime: responseTime,
-        //     customerName: customerName || 'Anonymous',
-        //     sessionId: sessionId,
-        //     botResponse: data.data?.response || data.response
-        // });
+        trackAnalyticsEvent('message_sent', {
+            message: message,
+            response_time: responseTime,
+            customer_name: customerName || 'Anonymous',
+            session_id: sessionId,
+            bot_response: data.data?.response || data.response
+        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
