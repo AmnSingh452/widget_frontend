@@ -820,13 +820,10 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
-        // Only send session_id if it was previously returned by backend
-        // Build payload with only required fields in snake_case
         let validMessage = typeof message === 'string' ? message.trim() : '';
         let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
         let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
 
-        // If message or shop_domain is missing, abort and show error
         if (!validMessage || !validShopDomain) {
             console.error('❌ Required fields missing. Aborting fetch.');
             showBotMessage('❌ Error: Message and shop domain are required.');
@@ -843,9 +840,6 @@ async function sendMessage() {
         console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
-        const stringifiedPayload = JSON.stringify(payload);
-        console.log('📝 Request payload (JSON):', stringifiedPayload);
-
 
         const response = await fetch(API_URLS.chat, {
             method: "POST",
@@ -862,18 +856,11 @@ async function sendMessage() {
         const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
         
-        // Track message sent with response time
-        trackAnalyticsEvent('message_sent', {
-            message: message,
-            response_time: responseTime,
-            customer_name: customerName || 'Anonymous',
-            session_id: sessionId,
-            bot_response: data.data?.response || data.response
-        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
         }
+
         // Handle response
         const payload_data = data.data || data;
         if (payload_data.response) {
@@ -901,11 +888,9 @@ async function sendMessage() {
             apiUrl: API_URLS.chat,
             shopDomain: window.SHOP_DOMAIN || SHOP_DOMAIN
         });
-        // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
         }
-        // Show error message
         if (chatMessages) {
             const errorDiv = document.createElement('div');
             errorDiv.className = 'message bot-message';
@@ -915,6 +900,7 @@ async function sendMessage() {
         }
     }
 }
+
 
 // Event listeners for sending messages
 
