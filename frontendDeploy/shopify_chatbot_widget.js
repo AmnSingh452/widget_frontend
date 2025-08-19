@@ -820,10 +820,11 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
-        // Validate and sanitize message
+        // Only send session_id if it was previously returned by backend
+        // Build payload with only required fields in snake_case
         let validMessage = typeof message === 'string' ? message.trim() : '';
         let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
-        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : (sessionId || null);
+        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
 
         // If message or shop_domain is missing, abort and show error
         if (!validMessage || !validShopDomain) {
@@ -833,64 +834,40 @@ async function sendMessage() {
             return;
         }
 
-        // Always send all required fields, even if session_id is null
-        const payload = {
+        let payload = {
             message: validMessage,
             shop_domain: validShopDomain,
             session_id: validSessionId
         };
 
-        // Log payload before sending
-        console.log('� Prepared payload:', payload);
+        console.log('🚀 Sending message with shop domain:', validShopDomain);
+        console.log('📡 API endpoint:', API_URLS.chat);
+        console.log('📝 Request payload (object):', payload);
         const stringifiedPayload = JSON.stringify(payload);
-        console.log('📝 Payload JSON:', stringifiedPayload);
-        console.log('📝 Payload JSON:', stringifiedPayload);
+        console.log('📝 Request payload (JSON):', stringifiedPayload);
 
-        // Additional diagnostics
-        console.log('🔎 API_URL:', API_URLS.chat);
-        console.log('🔎 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload ? stringifiedPayload.length : 0);
-        if (!stringifiedPayload || stringifiedPayload.length === 0) {
-            console.error('🚨 Payload is empty before fetch!', payload);
-        }
-        if (!API_URLS.chat) {
-            console.error('🚨 API_URLS.chat is undefined!');
-        }
-        // Log fetch options
-        const fetchOptions = {
+
+        const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: stringifiedPayload,
-        };
-        console.log('🔎 Fetch options:', fetchOptions);
-        // End diagnostics
-        
-
-        // Extra check: ensure payload is not empty and has required keys
-        if (!payload.message || !payload.shop_domain) {
-            console.error('❌ Payload missing required fields:', payload);
-            showBotMessage('❌ Error: Message and shop domain are required in payload.');
-            if (window.hideTypingIndicator) window.hideTypingIndicator();
-            return;
-        }
-
-        // Send to API
-        const response = await fetch(API_URLS.chat, fetchOptions);
+            body: JSON.stringify(payload),
+        });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         const data = await response.json();
         const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
-
+        
         // Track message sent with response time
         trackAnalyticsEvent('message_sent', {
-            message: validMessage,
+            message: message,
             responseTime: responseTime,
             customerName: customerName || 'Anonymous',
-            sessionId: validSessionId,
+            sessionId: sessionId,
             botResponse: data.data?.response || data.response
         });
         // Hide typing indicator
