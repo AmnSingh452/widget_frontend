@@ -790,6 +790,7 @@ role: 'bot',
 async function sendMessage() {
     const message = document.getElementById('chat-input')?.value?.trim();
     const chatMessages = document.getElementById('chat-messages');
+
     if (!message) return;
     if (!window.SHOP_DOMAIN) {
         console.error('❌ Shop domain not available');
@@ -838,6 +839,7 @@ async function sendMessage() {
             shop_domain: validShopDomain,
             session_id: validSessionId
         };
+        const stringifiedPayload = JSON.stringify(payload);
 
         console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📡 API endpoint:', API_URLS.chat);
