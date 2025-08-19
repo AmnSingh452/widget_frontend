@@ -844,6 +844,7 @@ async function sendMessage() {
         console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
+        console.log('📝 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload.length);
 
         const response = await fetch(API_URLS.chat, {
             method: "POST",
