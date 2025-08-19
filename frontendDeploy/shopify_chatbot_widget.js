@@ -820,11 +820,9 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
-        // Only send session_id if it was previously returned by backend
-        // Build payload with only required fields in snake_case
         let validMessage = typeof message === 'string' ? message.trim() : '';
         let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
-        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
+        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : (sessionId || null);
 
         // If message or shop_domain is missing, abort and show error
         if (!validMessage || !validShopDomain) {
@@ -834,7 +832,8 @@ async function sendMessage() {
             return;
         }
 
-        let payload = {
+        // Always send all required fields, even if session_id is null
+        const payload = {
             message: validMessage,
             shop_domain: validShopDomain,
             session_id: validSessionId
@@ -843,9 +842,6 @@ async function sendMessage() {
         console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
-        const stringifiedPayload = JSON.stringify(payload);
-        console.log('📝 Request payload (JSON):', stringifiedPayload);
-
 
         const response = await fetch(API_URLS.chat, {
             method: "POST",
@@ -853,7 +849,7 @@ async function sendMessage() {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify(payload),
+            body: stringifiedPayload,
         });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -862,14 +858,6 @@ async function sendMessage() {
         const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
         
-        // Track message sent with response time
-        trackAnalyticsEvent('message_sent', {
-            message: message,
-            responseTime: responseTime,
-            customerName: customerName || 'Anonymous',
-            sessionId: sessionId,
-            botResponse: data.data?.response || data.response
-        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
