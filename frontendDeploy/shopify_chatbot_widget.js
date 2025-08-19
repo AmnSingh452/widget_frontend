@@ -820,11 +820,10 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
-        // Only send session_id if it was previously returned by backend
-        // Build payload with only required fields in snake_case
+        // Validate and sanitize message
         let validMessage = typeof message === 'string' ? message.trim() : '';
         let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
-        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
+        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : (sessionId || null);
 
         // If message or shop_domain is missing, abort and show error
         if (!validMessage || !validShopDomain) {
@@ -834,26 +833,34 @@ async function sendMessage() {
             return;
         }
 
-        let payload = {
+        // Always send all required fields, even if session_id is null
+        const payload = {
             message: validMessage,
             shop_domain: validShopDomain,
             session_id: validSessionId
         };
 
-        console.log('🚀 Sending message with shop domain:', validShopDomain);
-        console.log('📡 API endpoint:', API_URLS.chat);
-        console.log('📝 Request payload (object):', payload);
+        // Log payload before sending
+        console.log('� Prepared payload:', payload);
         const stringifiedPayload = JSON.stringify(payload);
-        console.log('📝 Request payload (JSON):', stringifiedPayload);
+        console.log('📝 Payload JSON:', stringifiedPayload);
 
+        // Extra check: ensure payload is not empty and has required keys
+        if (!payload.message || !payload.shop_domain) {
+            console.error('❌ Payload missing required fields:', payload);
+            showBotMessage('❌ Error: Message and shop domain are required in payload.');
+            if (window.hideTypingIndicator) window.hideTypingIndicator();
+            return;
+        }
 
+        // Send to API
         const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: JSON.stringify(payload),
+            body: stringifiedPayload,
         });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -861,13 +868,13 @@ async function sendMessage() {
         const data = await response.json();
         const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
-        
+
         // Track message sent with response time
         trackAnalyticsEvent('message_sent', {
-            message: message,
+            message: validMessage,
             responseTime: responseTime,
             customerName: customerName || 'Anonymous',
-            sessionId: sessionId,
+            sessionId: validSessionId,
             botResponse: data.data?.response || data.response
         });
         // Hide typing indicator
