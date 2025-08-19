@@ -844,6 +844,29 @@ async function sendMessage() {
         console.log('� Prepared payload:', payload);
         const stringifiedPayload = JSON.stringify(payload);
         console.log('📝 Payload JSON:', stringifiedPayload);
+        console.log('📝 Payload JSON:', stringifiedPayload);
+
+        // Additional diagnostics
+        console.log('🔎 API_URL:', API_URLS.chat);
+        console.log('🔎 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload ? stringifiedPayload.length : 0);
+        if (!stringifiedPayload || stringifiedPayload.length === 0) {
+            console.error('🚨 Payload is empty before fetch!', payload);
+        }
+        if (!API_URLS.chat) {
+            console.error('🚨 API_URLS.chat is undefined!');
+        }
+        // Log fetch options
+        const fetchOptions = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: stringifiedPayload,
+        };
+        console.log('🔎 Fetch options:', fetchOptions);
+        // End diagnostics
+        
 
         // Extra check: ensure payload is not empty and has required keys
         if (!payload.message || !payload.shop_domain) {
@@ -854,14 +877,7 @@ async function sendMessage() {
         }
 
         // Send to API
-        const response = await fetch(API_URLS.chat, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: stringifiedPayload,
-        });
+        const response = await fetch(API_URLS.chat, fetchOptions);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
