@@ -19,10 +19,28 @@ const DEFAULT_WIDGET_SETTINGS = {
 };
 let widgetSettings = { ...DEFAULT_WIDGET_SETTINGS };
 
-// Detect shop domain globally
-const SHOP_DOMAIN = window.Shopify?.shop || null;
+// --- Robust SHOPIFY_CHATBOT_CONFIG and shop domain detection ---
+let SHOP_DOMAIN = null;
+if (
+  window.SHOPIFY_CHATBOT_CONFIG &&
+  typeof window.SHOPIFY_CHATBOT_CONFIG.shop_domain === 'string' &&
+  window.SHOPIFY_CHATBOT_CONFIG.shop_domain.trim()
+) {
+  SHOP_DOMAIN = window.SHOPIFY_CHATBOT_CONFIG.shop_domain.trim();
+} else if (window.Shopify?.shop) {
+  SHOP_DOMAIN = window.Shopify.shop.trim();
+} else if (window.SHOP_DOMAIN && typeof window.SHOP_DOMAIN === 'string') {
+  SHOP_DOMAIN = window.SHOP_DOMAIN.trim();
+}
 if (!SHOP_DOMAIN) {
-    console.error('Shop domain not found. Multi-tenant frontend requires shop domain.');
+  // Try meta tag fallback
+  const metaShopDomain = document.querySelector('meta[name="shopify-shop-domain"]');
+  if (metaShopDomain && metaShopDomain.content) {
+    SHOP_DOMAIN = metaShopDomain.content.trim();
+  }
+}
+if (!SHOP_DOMAIN) {
+  console.error('Shop domain not found. Multi-tenant frontend requires shop domain.');
 }
 
 // Inject base CSS if not present
