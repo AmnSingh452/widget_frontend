@@ -519,13 +519,13 @@ function applyWidgetStyles(settings) {
 // Configuration - Dynamic API URLs
 function getApiUrls() {
     const config = window.SHOPIFY_CHATBOT_CONFIG;
-    if (config && config.use_proxy && config.api_endpoints) {
+    if (config && typeof config === 'object' && config.api_endpoints && typeof config.api_endpoints === 'object') {
         return {
-            chat: config.api_endpoints.chat,
-            session: config.api_endpoints.session,
-            customer_update: config.api_endpoints.customer_update,
-            recommendations: config.api_endpoints.recommendations || `${config.proxy_base_url}/api/recommendations`,
-            abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount
+            chat: config.api_endpoints.chat || 'https://cartrecover-bot.onrender.com/api/chat',
+            session: config.api_endpoints.session || 'https://cartrecover-bot.onrender.com/api/session',
+            customer_update: config.api_endpoints.customer_update || 'https://cartrecover-bot.onrender.com/api/customer/update',
+            recommendations: config.api_endpoints.recommendations || 'https://cartrecover-bot.onrender.com/api/recommendations',
+            abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount || 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
         };
     }
     return {
@@ -840,7 +840,7 @@ async function sendMessage() {
     
     try {
         let validMessage = typeof message === 'string' ? message.trim() : '';
-        let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
+        let validShopDomain = (SHOP_DOMAIN || window.SHOP_DOMAIN || '').trim();
         let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : (sessionId || null);
 
         // If message or shop_domain is missing, abort and show error
@@ -857,9 +857,39 @@ async function sendMessage() {
             shop_domain: validShopDomain,
             session_id: validSessionId
         };
+        
+        // Validate payload before stringifying
+        console.log('🔍 Payload validation:', {
+            message_valid: !!payload.message,
+            shop_domain_valid: !!payload.shop_domain,
+            session_id: payload.session_id,
+            payload: payload
+        });
+
+        if (!payload.message || !payload.shop_domain) {
+            console.error('❌ Invalid payload - missing required fields:', payload);
+            showBotMessage('❌ Error: Invalid message payload. Missing message or shop domain.');
+            if (window.hideTypingIndicator) window.hideTypingIndicator();
+            return;
+        }
+
         const stringifiedPayload = JSON.stringify(payload);
 
+        // Additional validation after stringifying
+        if (!stringifiedPayload || stringifiedPayload === '{}' || stringifiedPayload.length < 10) {
+            console.error('❌ Stringified payload is invalid:', {
+                original: payload,
+                stringified: stringifiedPayload,
+                length: stringifiedPayload ? stringifiedPayload.length : 0,
+                typeof: typeof stringifiedPayload
+            });
+            showBotMessage('❌ Error: Failed to create request payload.');
+            if (window.hideTypingIndicator) window.hideTypingIndicator();
+            return;
+        }
+
         console.log('🚀 Sending message with shop domain:', validShopDomain);
+        console.log('📝 Raw stringified payload:', stringifiedPayload);
         console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
         console.log('📝 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload.length);
