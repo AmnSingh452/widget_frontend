@@ -1,5 +1,18 @@
 // JARVIS 2.0 Integration
 const JARVIS_API_URL = 'https://jarvis2-0-djg1.onrender.com'; // <-- Replace with your Jarvis app URL
+
+// FORCE BACKEND API CONFIG - Set this immediately to override any other config
+window.SHOPIFY_CHATBOT_CONFIG = {
+    api_endpoints: {
+        chat: "https://cartrecover-bot.onrender.com/api/chat",
+        session: "https://cartrecover-bot.onrender.com/api/session", 
+        customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
+        recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
+        abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
+    }
+};
+console.log('🔧 FORCED backend API config:', window.SHOPIFY_CHATBOT_CONFIG);
+
 const DEFAULT_WIDGET_SETTINGS = {
     primaryColor: "#007bff",
     secondaryColor: "#0056b3",
@@ -683,7 +696,7 @@ async function updateCustomerInfo(name) {
         return;
     }
     try {
-        const response = await fetch(API_URLS.customer_update, {
+        const response = await fetch(getApiUrls().customer_update, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -763,8 +776,7 @@ async function loadChatHistory() {
     console.log('loadChatHistory called. Current sessionId:', sessionId);
     if (sessionId) {
         try {
-            const response = await fetch(`${API_URLS.session}/${sessionId}`, {
-                method: 'GET',
+            const response = await fetch(`${getApiUrls().session}/${sessionId}`, {                method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await response.json();
@@ -887,11 +899,11 @@ async function sendMessage() {
 
         console.log('🚀 Sending message with shop domain:', validShopDomain);
         console.log('📝 Raw stringified payload:', stringifiedPayload);
-        console.log('📡 API endpoint:', API_URLS.chat);
+        console.log('📡 API endpoint:', getApiUrls().chat);
         console.log('📝 Request payload (object):', payload);
         console.log('📝 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload.length);
 
-        const response = await fetch(API_URLS.chat, {
+        const response = await fetch(getApiUrls().chat, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -934,7 +946,7 @@ async function sendMessage() {
             message: error.message,
             stack: error.stack,
             name: error.name,
-            apiUrl: API_URLS.chat,
+            apiUrl: getApiUrls().chat,
             shopDomain: window.SHOP_DOMAIN || SHOP_DOMAIN
         });
         // Hide typing indicator
@@ -975,8 +987,7 @@ async function fetchAndShowRecommendations(productIds = [], customerId = null) {
         return;
     }
     try {
-        const response = await fetch(API_URLS.recommendations, {
-            method: 'POST',
+        const response = await fetch(getApiUrls().recommendations, {            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_ids: productIds,
@@ -1044,8 +1055,7 @@ async function offerAbandonedCartDiscount() {
         showBotMessage("Error: Shop domain or session not found. Cannot offer discount.");
         return;
     }
-    const response = await fetch(API_URLS.abandoned_cart_discount, {
-        method: 'POST',
+    const response = await fetch(getApiUrls().abandoned_cart_discount, {        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             discount_percentage: 10,
