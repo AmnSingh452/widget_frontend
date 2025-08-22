@@ -475,36 +475,21 @@ function applyWidgetStyles(settings) {
     };
     window.SHOP_DOMAIN = detectShopDomain();
     // Dynamic config fetch
+    // Dynamic config fetch - DISABLED for now, using backend URLs directly
     window.initializeJarvisConfig = async function() {
         if (!window.SHOP_DOMAIN) return false;
-        try {
-            const configEndpoint = window.SHOPIFY_CHATBOT_CONFIG?.config_endpoint || `https://jarvis2-0-djg1.onrender.com/api/widget-config?shop=${window.SHOP_DOMAIN}`;
-            const response = await fetch(configEndpoint);
-            const configData = await response.json();
-            if (configData.success && configData.config) {
-                window.API_BASE_URL = configData.config.api_endpoints.chat;
-                window.HISTORY_API_URL = configData.config.api_endpoints.session;
-                window.CUSTOMER_UPDATE_URL = configData.config.api_endpoints.customer_update;
-                window.RECOMMENDATIONS_API_URL = configData.config.api_endpoints.recommendations;
-                window.DISCOUNT_API_URL = configData.config.api_endpoints.abandoned_cart_discount;
-                return true;
-            }
-        } catch (error) {
-            // Fallbacks
-            const fallbackEndpoints = window.SHOPIFY_CHATBOT_CONFIG?.api_endpoints || {
+        console.log('🔧 Forcing backend API endpoints (Jarvis config disabled)');
+        // Force use of backend endpoints instead of Jarvis
+        window.SHOPIFY_CHATBOT_CONFIG = {
+            api_endpoints: {
                 chat: "https://cartrecover-bot.onrender.com/api/chat",
-                recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
-                abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount",
                 session: "https://cartrecover-bot.onrender.com/api/session",
-                customer_update: "https://cartrecover-bot.onrender.com/api/customer/update"
-            };
-            window.API_BASE_URL = fallbackEndpoints.chat;
-            window.HISTORY_API_URL = fallbackEndpoints.session;
-            window.CUSTOMER_UPDATE_URL = fallbackEndpoints.customer_update;
-            window.RECOMMENDATIONS_API_URL = fallbackEndpoints.recommendations;
-            window.DISCOUNT_API_URL = fallbackEndpoints.abandoned_cart_discount;
-            return true;
-        }
+                customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
+                recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
+                abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
+            }
+        };
+        return true;
     };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', async () => {
@@ -519,22 +504,34 @@ function applyWidgetStyles(settings) {
 // Configuration - Dynamic API URLs
 function getApiUrls() {
     const config = window.SHOPIFY_CHATBOT_CONFIG;
+    console.log('🔧 Config check:', {
+        configExists: !!config,
+        configType: typeof config,
+        hasApiEndpoints: !!(config && config.api_endpoints),
+        apiEndpoints: config?.api_endpoints,
+        fullConfig: config
+    });
+    
     if (config && typeof config === 'object' && config.api_endpoints && typeof config.api_endpoints === 'object') {
-        return {
+        const urls = {
             chat: config.api_endpoints.chat || 'https://cartrecover-bot.onrender.com/api/chat',
             session: config.api_endpoints.session || 'https://cartrecover-bot.onrender.com/api/session',
             customer_update: config.api_endpoints.customer_update || 'https://cartrecover-bot.onrender.com/api/customer/update',
             recommendations: config.api_endpoints.recommendations || 'https://cartrecover-bot.onrender.com/api/recommendations',
             abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount || 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
         };
+        console.log('🔧 Using config API URLs:', urls);
+        return urls;
     }
-    return {
+    const defaultUrls = {
         chat: 'https://cartrecover-bot.onrender.com/api/chat',
         session: 'https://cartrecover-bot.onrender.com/api/session',
         customer_update: 'https://cartrecover-bot.onrender.com/api/customer/update',
         recommendations: 'https://cartrecover-bot.onrender.com/api/recommendations',
         abandoned_cart_discount: 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
     };
+    console.log('🔧 Using default API URLs:', defaultUrls);
+    return defaultUrls;
 }
 
 const API_URLS = getApiUrls();
