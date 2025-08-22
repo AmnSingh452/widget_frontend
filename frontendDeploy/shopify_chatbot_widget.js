@@ -1,17 +1,22 @@
 // JARVIS 2.0 Integration
 const JARVIS_API_URL = 'https://jarvis2-0-djg1.onrender.com'; // <-- Replace with your Jarvis app URL
 
-// FORCE BACKEND API CONFIG - Set this immediately to override any other config
-window.SHOPIFY_CHATBOT_CONFIG = {
-    api_endpoints: {
-        chat: "https://cartrecover-bot.onrender.com/api/chat",
-        session: "https://cartrecover-bot.onrender.com/api/session", 
-        customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
-        recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
-        abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
-    }
-};
-console.log('🔧 FORCED backend API config:', window.SHOPIFY_CHATBOT_CONFIG);
+// Smart Configuration - Supports both direct backend and proxy modes
+if (!window.SHOPIFY_CHATBOT_CONFIG) {
+    window.SHOPIFY_CHATBOT_CONFIG = {
+        use_proxy: true, // Set to true for Shopify App Store (proxy mode)
+        proxy_base_url: "https://jarvis2-0-djg1.onrender.com", // Your Jarvis proxy URL
+        api_endpoints: {
+            chat: "https://cartrecover-bot.onrender.com/api/chat",
+            session: "https://cartrecover-bot.onrender.com/api/session", 
+            customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
+            recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
+            abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
+        },
+        shop_domain: null // Will be auto-detected
+    };
+}
+console.log('🔧 Smart config initialized:', window.SHOPIFY_CHATBOT_CONFIG);
 
 const DEFAULT_WIDGET_SETTINGS = {
     primaryColor: "#007bff",
@@ -514,17 +519,32 @@ function applyWidgetStyles(settings) {
 })();
 // --- END PATCH ---
 
-// Configuration - Dynamic API URLs
+// Configuration - Dynamic API URLs with Proxy Support
 function getApiUrls() {
     const config = window.SHOPIFY_CHATBOT_CONFIG;
     console.log('🔧 Config check:', {
         configExists: !!config,
         configType: typeof config,
+        useProxy: config?.use_proxy,
         hasApiEndpoints: !!(config && config.api_endpoints),
         apiEndpoints: config?.api_endpoints,
         fullConfig: config
     });
     
+    // If proxy mode is enabled, use Jarvis proxy endpoints
+    if (config && config.use_proxy && config.proxy_base_url) {
+        const proxyUrls = {
+            chat: `${config.proxy_base_url}/api/chat`,
+            session: `${config.proxy_base_url}/api/session`,
+            customer_update: `${config.proxy_base_url}/api/customer/update`,
+            recommendations: `${config.proxy_base_url}/api/recommendations`,
+            abandoned_cart_discount: `${config.proxy_base_url}/api/abandoned-cart-discount`
+        };
+        console.log('🔧 Using PROXY API URLs:', proxyUrls);
+        return proxyUrls;
+    }
+    
+    // If custom endpoints are provided (direct mode), use them
     if (config && typeof config === 'object' && config.api_endpoints && typeof config.api_endpoints === 'object') {
         const urls = {
             chat: config.api_endpoints.chat || 'https://cartrecover-bot.onrender.com/api/chat',
@@ -533,9 +553,11 @@ function getApiUrls() {
             recommendations: config.api_endpoints.recommendations || 'https://cartrecover-bot.onrender.com/api/recommendations',
             abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount || 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
         };
-        console.log('🔧 Using config API URLs:', urls);
+        console.log('🔧 Using DIRECT API URLs:', urls);
         return urls;
     }
+    
+    // Fallback to direct backend URLs
     const defaultUrls = {
         chat: 'https://cartrecover-bot.onrender.com/api/chat',
         session: 'https://cartrecover-bot.onrender.com/api/session',
@@ -543,7 +565,7 @@ function getApiUrls() {
         recommendations: 'https://cartrecover-bot.onrender.com/api/recommendations',
         abandoned_cart_discount: 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
     };
-    console.log('🔧 Using default API URLs:', defaultUrls);
+    console.log('🔧 Using DEFAULT API URLs:', defaultUrls);
     return defaultUrls;
 }
 
