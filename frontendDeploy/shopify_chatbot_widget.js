@@ -493,29 +493,7 @@ function applyWidgetStyles(settings) {
     };
     window.SHOP_DOMAIN = detectShopDomain();
     // Dynamic config fetch
-    // Dynamic config fetch - DISABLED for now, using backend URLs directly
-    window.initializeJarvisConfig = async function() {
-        if (!window.SHOP_DOMAIN) return false;
-        console.log('🔧 Forcing backend API endpoints (Jarvis config disabled)');
-        // Force use of backend endpoints instead of Jarvis
-        window.SHOPIFY_CHATBOT_CONFIG = {
-            api_endpoints: {
-                chat: "https://cartrecover-bot.onrender.com/api/chat",
-                session: "https://cartrecover-bot.onrender.com/api/session",
-                customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
-                recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
-                abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
-            }
-        };
-        return true;
-    };
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', async () => {
-            await window.initializeJarvisConfig();
-        });
-    } else {
-        window.initializeJarvisConfig();
-    }
+    
 })();
 // --- END PATCH ---
 
