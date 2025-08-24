@@ -4,17 +4,17 @@ const JARVIS_API_URL = 'https://jarvis2-0-djg1.onrender.com'; // <-- Replace wit
 // Smart Configuration - Supports both direct backend and proxy modes
 if (!window.SHOPIFY_CHATBOT_CONFIG) {
     window.SHOPIFY_CHATBOT_CONFIG = {
-        use_proxy: true, // Set to true for Shopify App Store (proxy mode)
-        proxy_base_url: "https://jarvis2-0-djg1.onrender.com", // Your Jarvis proxy URL
-        api_endpoints: {
-            chat: "https://cartrecover-bot.onrender.com/api/chat",
-            session: "https://cartrecover-bot.onrender.com/api/session", 
-            customer_update: "https://cartrecover-bot.onrender.com/api/customer/update",
-            recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
-            abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount"
-        },
-        shop_domain: null // Will be auto-detected
-    };
+    use_proxy: true,
+    proxy_base_url: "https://jarvis2-0-djg1.onrender.com", // ✅ KEEP ONLY THIS
+    api_endpoints: {
+        chat: "https://jarvis2-0-djg1.onrender.com/api/chat",
+        session: "https://jarvis2-0-djg1.onrender.com/api/session",
+        customer_update: "https://jarvis2-0-djg1.onrender.com/api/customer/update",
+        recommendations: "https://jarvis2-0-djg1.onrender.com/api/recommendations",
+        abandoned_cart_discount: "https://jarvis2-0-djg1.onrender.com/api/abandoned-cart-discount"
+    },
+    shop_domain: null
+};
 }
 console.log('🔧 Smart config initialized:', window.SHOPIFY_CHATBOT_CONFIG);
 
