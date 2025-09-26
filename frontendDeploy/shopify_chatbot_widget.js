@@ -1,23 +1,5 @@
 // JARVIS 2.0 Integration
 const JARVIS_API_URL = 'https://jarvis2-0-djg1.onrender.com'; // <-- Replace with your Jarvis app URL
-
-// Smart Configuration - Supports both direct backend and proxy modes
-if (!window.SHOPIFY_CHATBOT_CONFIG) {
-    window.SHOPIFY_CHATBOT_CONFIG = {
-    use_proxy: true,
-    proxy_base_url: "https://jarvis2-0-djg1.onrender.com", // ✅ KEEP ONLY THIS
-    api_endpoints: {
-        chat: "https://jarvis2-0-djg1.onrender.com/api/chat",
-        session: "https://jarvis2-0-djg1.onrender.com/api/session",
-        customer_update: "https://jarvis2-0-djg1.onrender.com/api/customer/update",
-        recommendations: "https://jarvis2-0-djg1.onrender.com/api/recommendations",
-        abandoned_cart_discount: "https://jarvis2-0-djg1.onrender.com/api/abandoned-cart-discount"
-    },
-    shop_domain: null
-};
-}
-console.log('🔧 Smart config initialized:', window.SHOPIFY_CHATBOT_CONFIG);
-
 const DEFAULT_WIDGET_SETTINGS = {
     primaryColor: "#007bff",
     secondaryColor: "#0056b3",
@@ -37,28 +19,10 @@ const DEFAULT_WIDGET_SETTINGS = {
 };
 let widgetSettings = { ...DEFAULT_WIDGET_SETTINGS };
 
-// --- Robust SHOPIFY_CHATBOT_CONFIG and shop domain detection ---
-let SHOP_DOMAIN = null;
-if (
-  window.SHOPIFY_CHATBOT_CONFIG &&
-  typeof window.SHOPIFY_CHATBOT_CONFIG.shop_domain === 'string' &&
-  window.SHOPIFY_CHATBOT_CONFIG.shop_domain.trim()
-) {
-  SHOP_DOMAIN = window.SHOPIFY_CHATBOT_CONFIG.shop_domain.trim();
-} else if (window.Shopify?.shop) {
-  SHOP_DOMAIN = window.Shopify.shop.trim();
-} else if (window.SHOP_DOMAIN && typeof window.SHOP_DOMAIN === 'string') {
-  SHOP_DOMAIN = window.SHOP_DOMAIN.trim();
-}
+// Detect shop domain globally
+const SHOP_DOMAIN = window.Shopify?.shop || null;
 if (!SHOP_DOMAIN) {
-  // Try meta tag fallback
-  const metaShopDomain = document.querySelector('meta[name="shopify-shop-domain"]');
-  if (metaShopDomain && metaShopDomain.content) {
-    SHOP_DOMAIN = metaShopDomain.content.trim();
-  }
-}
-if (!SHOP_DOMAIN) {
-  console.error('Shop domain not found. Multi-tenant frontend requires shop domain.');
+    console.error('Shop domain not found. Multi-tenant frontend requires shop domain.');
 }
 
 // Inject base CSS if not present
@@ -493,58 +457,66 @@ function applyWidgetStyles(settings) {
     };
     window.SHOP_DOMAIN = detectShopDomain();
     // Dynamic config fetch
-    
+    window.initializeJarvisConfig = async function() {
+        if (!window.SHOP_DOMAIN) return false;
+        try {
+            const configEndpoint = window.SHOPIFY_CHATBOT_CONFIG?.config_endpoint || `https://jarvis2-0-djg1.onrender.com/api/widget-config?shop=${window.SHOP_DOMAIN}`;
+            const response = await fetch(configEndpoint);
+            const configData = await response.json();
+            if (configData.success && configData.config) {
+                window.API_BASE_URL = configData.config.api_endpoints.chat;
+                window.HISTORY_API_URL = configData.config.api_endpoints.session;
+                window.CUSTOMER_UPDATE_URL = configData.config.api_endpoints.customer_update;
+                window.RECOMMENDATIONS_API_URL = configData.config.api_endpoints.recommendations;
+                window.DISCOUNT_API_URL = configData.config.api_endpoints.abandoned_cart_discount;
+                return true;
+            }
+        } catch (error) {
+            // Fallbacks
+            const fallbackEndpoints = window.SHOPIFY_CHATBOT_CONFIG?.api_endpoints || {
+                chat: "https://cartrecover-bot.onrender.com/api/chat",
+                recommendations: "https://cartrecover-bot.onrender.com/api/recommendations",
+                abandoned_cart_discount: "https://cartrecover-bot.onrender.com/api/abandoned-cart-discount",
+                session: "https://cartrecover-bot.onrender.com/api/session",
+                customer_update: "https://cartrecover-bot.onrender.com/api/customer/update"
+            };
+            window.API_BASE_URL = fallbackEndpoints.chat;
+            window.HISTORY_API_URL = fallbackEndpoints.session;
+            window.CUSTOMER_UPDATE_URL = fallbackEndpoints.customer_update;
+            window.RECOMMENDATIONS_API_URL = fallbackEndpoints.recommendations;
+            window.DISCOUNT_API_URL = fallbackEndpoints.abandoned_cart_discount;
+            return true;
+        }
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await window.initializeJarvisConfig();
+        });
+    } else {
+        window.initializeJarvisConfig();
+    }
 })();
 // --- END PATCH ---
 
-// Configuration - Dynamic API URLs with Proxy Support
+// Configuration - Dynamic API URLs
 function getApiUrls() {
     const config = window.SHOPIFY_CHATBOT_CONFIG;
-    console.log('🔧 Config check:', {
-        configExists: !!config,
-        configType: typeof config,
-        useProxy: config?.use_proxy,
-        hasApiEndpoints: !!(config && config.api_endpoints),
-        apiEndpoints: config?.api_endpoints,
-        fullConfig: config
-    });
-    
-    // If proxy mode is enabled, use Jarvis proxy endpoints
-    if (config && config.use_proxy && config.proxy_base_url) {
-        const proxyUrls = {
-            chat: `${config.proxy_base_url}/api/chat`,
-            session: `${config.proxy_base_url}/api/session`,
-            customer_update: `${config.proxy_base_url}/api/customer/update`,
-            recommendations: `${config.proxy_base_url}/api/recommendations`,
-            abandoned_cart_discount: `${config.proxy_base_url}/api/abandoned-cart-discount`
+    if (config && config.use_proxy && config.api_endpoints) {
+        return {
+            chat: config.api_endpoints.chat,
+            session: config.api_endpoints.session,
+            customer_update: config.api_endpoints.customer_update,
+            recommendations: config.api_endpoints.recommendations || `${config.proxy_base_url}/api/recommendations`,
+            abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount
         };
-        console.log('🔧 Using PROXY API URLs:', proxyUrls);
-        return proxyUrls;
     }
-    
-    // If custom endpoints are provided (direct mode), use them
-    if (config && typeof config === 'object' && config.api_endpoints && typeof config.api_endpoints === 'object') {
-        const urls = {
-            chat: config.api_endpoints.chat || 'https://cartrecover-bot.onrender.com/api/chat',
-            session: config.api_endpoints.session || 'https://cartrecover-bot.onrender.com/api/session',
-            customer_update: config.api_endpoints.customer_update || 'https://cartrecover-bot.onrender.com/api/customer/update',
-            recommendations: config.api_endpoints.recommendations || 'https://cartrecover-bot.onrender.com/api/recommendations',
-            abandoned_cart_discount: config.api_endpoints.abandoned_cart_discount || 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
-        };
-        console.log('🔧 Using DIRECT API URLs:', urls);
-        return urls;
-    }
-    
-    // Fallback to direct backend URLs
-    const defaultUrls = {
+    return {
         chat: 'https://cartrecover-bot.onrender.com/api/chat',
         session: 'https://cartrecover-bot.onrender.com/api/session',
         customer_update: 'https://cartrecover-bot.onrender.com/api/customer/update',
         recommendations: 'https://cartrecover-bot.onrender.com/api/recommendations',
         abandoned_cart_discount: 'https://cartrecover-bot.onrender.com/api/abandoned-cart-discount'
     };
-    console.log('🔧 Using DEFAULT API URLs:', defaultUrls);
-    return defaultUrls;
 }
 
 const API_URLS = getApiUrls();
@@ -696,7 +668,7 @@ async function updateCustomerInfo(name) {
         return;
     }
     try {
-        const response = await fetch(getApiUrls().customer_update, {
+        const response = await fetch(API_URLS.customer_update, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -776,7 +748,8 @@ async function loadChatHistory() {
     console.log('loadChatHistory called. Current sessionId:', sessionId);
     if (sessionId) {
         try {
-            const response = await fetch(`${getApiUrls().session}/${sessionId}`, {                method: 'GET',
+            const response = await fetch(`${API_URLS.session}/${sessionId}`, {
+                method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await response.json();
@@ -817,7 +790,6 @@ role: 'bot',
 async function sendMessage() {
     const message = document.getElementById('chat-input')?.value?.trim();
     const chatMessages = document.getElementById('chat-messages');
-
     if (!message) return;
     if (!window.SHOP_DOMAIN) {
         console.error('❌ Shop domain not available');
@@ -848,9 +820,11 @@ async function sendMessage() {
     const messageStartTime = Date.now();
     
     try {
+        // Only send session_id if it was previously returned by backend
+        // Build payload with only required fields in snake_case
         let validMessage = typeof message === 'string' ? message.trim() : '';
-        let validShopDomain = (SHOP_DOMAIN || window.SHOP_DOMAIN || '').trim();
-        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : (sessionId || null);
+        let validShopDomain = (window.SHOP_DOMAIN || SHOP_DOMAIN || '').trim();
+        let validSessionId = typeof window.sessionId === 'string' ? window.sessionId : null;
 
         // If message or shop_domain is missing, abort and show error
         if (!validMessage || !validShopDomain) {
@@ -860,56 +834,26 @@ async function sendMessage() {
             return;
         }
 
-        // Always send all required fields, even if session_id is null
-        const payload = {
+        let payload = {
             message: validMessage,
             shop_domain: validShopDomain,
             session_id: validSessionId
         };
-        
-        // Validate payload before stringifying
-        console.log('🔍 Payload validation:', {
-            message_valid: !!payload.message,
-            shop_domain_valid: !!payload.shop_domain,
-            session_id: payload.session_id,
-            payload: payload
-        });
-
-        if (!payload.message || !payload.shop_domain) {
-            console.error('❌ Invalid payload - missing required fields:', payload);
-            showBotMessage('❌ Error: Invalid message payload. Missing message or shop domain.');
-            if (window.hideTypingIndicator) window.hideTypingIndicator();
-            return;
-        }
-
-        const stringifiedPayload = JSON.stringify(payload);
-
-        // Additional validation after stringifying
-        if (!stringifiedPayload || stringifiedPayload === '{}' || stringifiedPayload.length < 10) {
-            console.error('❌ Stringified payload is invalid:', {
-                original: payload,
-                stringified: stringifiedPayload,
-                length: stringifiedPayload ? stringifiedPayload.length : 0,
-                typeof: typeof stringifiedPayload
-            });
-            showBotMessage('❌ Error: Failed to create request payload.');
-            if (window.hideTypingIndicator) window.hideTypingIndicator();
-            return;
-        }
 
         console.log('🚀 Sending message with shop domain:', validShopDomain);
-        console.log('📝 Raw stringified payload:', stringifiedPayload);
-        console.log('📡 API endpoint:', getApiUrls().chat);
+        console.log('📡 API endpoint:', API_URLS.chat);
         console.log('📝 Request payload (object):', payload);
-        console.log('📝 Payload type:', typeof stringifiedPayload, 'Length:', stringifiedPayload.length);
+        const stringifiedPayload = JSON.stringify(payload);
+        console.log('📝 Request payload (JSON):', stringifiedPayload);
 
-        const response = await fetch(getApiUrls().chat, {
+
+        const response = await fetch(API_URLS.chat, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            body: stringifiedPayload,
+            body: JSON.stringify(payload),
         });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -918,6 +862,14 @@ async function sendMessage() {
         const responseTime = Date.now() - messageStartTime;
         console.log('📡 API response:', data);
         
+        // Track message sent with response time
+        trackAnalyticsEvent('message_sent', {
+            message: message,
+            responseTime: responseTime,
+            customerName: customerName || 'Anonymous',
+            sessionId: sessionId,
+            botResponse: data.data?.response || data.response
+        });
         // Hide typing indicator
         if (window.hideTypingIndicator) {
             window.hideTypingIndicator();
@@ -946,7 +898,7 @@ async function sendMessage() {
             message: error.message,
             stack: error.stack,
             name: error.name,
-            apiUrl: getApiUrls().chat,
+            apiUrl: API_URLS.chat,
             shopDomain: window.SHOP_DOMAIN || SHOP_DOMAIN
         });
         // Hide typing indicator
@@ -987,7 +939,8 @@ async function fetchAndShowRecommendations(productIds = [], customerId = null) {
         return;
     }
     try {
-        const response = await fetch(getApiUrls().recommendations, {            method: 'POST',
+        const response = await fetch(API_URLS.recommendations, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 product_ids: productIds,
@@ -1055,7 +1008,8 @@ async function offerAbandonedCartDiscount() {
         showBotMessage("Error: Shop domain or session not found. Cannot offer discount.");
         return;
     }
-    const response = await fetch(getApiUrls().abandoned_cart_discount, {        method: 'POST',
+    const response = await fetch(API_URLS.abandoned_cart_discount, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             discount_percentage: 10,
@@ -1126,3 +1080,298 @@ function trackSatisfactionRating(rating) {
         sessionId: sessionId
     });
 }
+
+
+// ========================================
+// CART ABANDONMENT DETECTION SYSTEM
+// ========================================
+
+// Cart Abandonment Detection - Auto-trigger after configurable delay
+class CartAbandonmentDetector {
+  constructor(options = {}) {
+    this.sessionId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.triggered = false;
+    this.triggerDelay = options.delay || 30000; // Default 30 seconds instead of 1 second
+    this.testMode = options.testMode || false;
+    this.init();
+  }
+
+  init() {
+    console.log(`🛒 Cart Abandonment Detector initialized - will trigger in ${this.triggerDelay/1000} seconds`);
+    
+    // Auto-trigger after delay
+    setTimeout(() => {
+      this.triggerAbandonmentOffer();
+    }, this.triggerDelay);
+  }
+
+  async triggerAbandonmentOffer() {
+    if (this.triggered) return;
+    this.triggered = true;
+
+    console.log('🛒 Triggering cart abandonment offer...');
+
+    try {
+      // Use the same API URL detection as the main widget
+      const apiUrls = getApiUrls();
+      const shopDomain = window.SHOP_DOMAIN || window.SHOPIFY_CHATBOT_CONFIG?.shop_domain;
+      
+      if (!shopDomain) {
+        console.error('❌ No shop domain found');
+        return;
+      }
+
+      // Use the dynamic API URL instead of hardcoded
+      const apiUrl = apiUrls.abandoned_cart_discount;
+      console.log('🛒 Using API URL:', apiUrl);
+
+      const payload = {
+        shop_domain: shopDomain,
+        session_id: this.sessionId,
+        customer_id: this.getCustomerId(),
+        cart_token: this.testMode ? 'test-token-' + Date.now() : this.getCartToken(),
+        products: this.testMode ? [
+          {
+            id: 'test-product',
+            title: 'Test Product',
+            price: '29.99'
+          }
+        ] : this.getCartProducts()
+      };
+
+      console.log('🛒 Sending payload:', payload);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let result;
+      const responseText = await response.text();
+      
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.log('❌ Failed to parse API response:', responseText);
+        return;
+      }
+
+      console.log('✅ Cart abandonment API response:', result);
+
+      if (response.ok && (result.discountCode || result.discount_code)) {
+        this.showDiscountInChat(result);
+        
+        // Track the discount offer
+        if (typeof trackAnalyticsEvent === 'function') {
+          trackAnalyticsEvent('discount_offered', {
+            discountCode: result.discountCode || result.discount_code,
+            sessionId: this.sessionId,
+            customerName: customerName || 'Anonymous'
+          });
+        }
+      } else {
+        console.error('❌ API failed:', result);
+      }
+
+    } catch (error) {
+      console.error('❌ Cart abandonment error:', error);
+    }
+  }
+
+  getCustomerId() {
+    if (window.Shopify && window.Shopify.customer && window.Shopify.customer.id) {
+      return window.Shopify.customer.id.toString();
+    }
+    return null;
+  }
+
+  getCartToken() {
+    // Try to get real cart token from Shopify
+    if (window.Shopify && window.Shopify.cart && window.Shopify.cart.token) {
+      return window.Shopify.cart.token;
+    }
+    return 'fallback-token-' + Date.now();
+  }
+
+  async getCartProducts() {
+    // Try to get real cart products
+    try {
+      const response = await fetch('/cart.js');
+      const cart = await response.json();
+      return cart.items?.map(item => ({
+        id: item.product_id,
+        title: item.product_title,
+        price: item.price / 100 // Convert cents to dollars
+      })) || [];
+    } catch (error) {
+      console.warn('Could not fetch cart products:', error);
+      return [];
+    }
+  }
+
+  showDiscountInChat(offerData) {
+    console.log('🎉 Showing discount in chat:', offerData);
+
+    const discountCode = offerData.discountCode || offerData.discount_code;
+    const discount = offerData.discount || offerData.discount_percentage || '10';
+    
+    // Find chat container using the same selector as the main widget
+    const chatContainer = document.getElementById('chat-messages');
+    
+    if (chatContainer) {
+      // Add discount message to chat
+      const discountMessage = document.createElement('div');
+      discountMessage.className = 'message bot-message discount-message';
+      discountMessage.innerHTML = `
+        <div style="
+          background: linear-gradient(135deg, #00A651 0%, #00D563 100%);
+          color: white;
+          padding: 16px;
+          border-radius: 12px;
+          margin: 10px 0;
+          text-align: center;
+          box-shadow: 0 4px 12px rgba(0,166,81,0.3);
+        ">
+          <div style="font-size: 18px; margin-bottom: 8px;">🎉</div>
+          <div style="font-weight: bold; margin-bottom: 8px;">Special Discount for You!</div>
+          <div style="margin-bottom: 12px;">Save ${discount}% on your purchase</div>
+          <div style="
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+          ">${discountCode}</div>
+          <div style="font-size: 12px; opacity: 0.9;">Use this code at checkout</div>
+        </div>
+      `;
+      
+      chatContainer.appendChild(discountMessage);
+      
+      // Scroll to show the message
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Also show as notification
+    this.showNotification(offerData);
+  }
+
+  showNotification(offerData) {
+    const discountCode = offerData.discountCode || offerData.discount_code;
+    const discount = offerData.discount || offerData.discount_percentage || '10';
+
+    // Remove existing notification
+    const existing = document.querySelector('.cart-discount-notification');
+    if (existing) existing.remove();
+
+    // Create notification
+    const notification = document.createElement('div');
+    notification.className = 'cart-discount-notification';
+    notification.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #00A651 0%, #00D563 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,166,81,0.3);
+        z-index: 10000;
+        max-width: 300px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        animation: slideInFromRight 0.4s ease-out;
+      ">
+        <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">
+          🎉 Discount Available!
+        </div>
+        <div style="margin-bottom: 12px; font-size: 14px;">
+          Save ${discount}% with code:
+        </div>
+        <div style="
+          background: rgba(255,255,255,0.2);
+          padding: 10px;
+          border-radius: 6px;
+          text-align: center;
+          font-weight: bold;
+          font-size: 16px;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+        ">${discountCode}</div>
+        <button onclick="this.parentElement.parentElement.remove()" style="
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          background: none;
+          border: none;
+          color: white;
+          cursor: pointer;
+          font-size: 18px;
+          opacity: 0.7;
+        ">×</button>
+      </div>
+    `;
+
+    // Add CSS animation if not already present
+    if (!document.querySelector('#cart-discount-animations')) {
+      const style = document.createElement('style');
+      style.id = 'cart-discount-animations';
+      style.textContent = `
+        @keyframes slideInFromRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(notification);
+
+    // Auto-remove after 15 seconds
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.remove();
+      }
+    }, 15000);
+  }
+}
+
+// Initialize cart abandonment detection when widget loads
+// Use a more conservative approach
+if (typeof window !== 'undefined') {
+  const initializeCartDetection = () => {
+    // Only initialize if the main widget is ready and we have shop domain
+    if ((window.SHOPIFY_CHATBOT_CONFIG || window.SHOP_DOMAIN) && 
+        document.getElementById('shopify-chatbot-widget')) {
+      
+      console.log('🛒 Initializing cart abandonment detection...');
+      
+      // Create detector with safer defaults
+      window.cartAbandonmentDetector = new CartAbandonmentDetector({
+        delay: 30000, // 30 seconds instead of 1 second
+        testMode: false // Set to true for testing
+      });
+    } else {
+      // Retry after a short delay if widget isn't ready
+      setTimeout(initializeCartDetection, 1000);
+    }
+  };
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initializeCartDetection, 2000);
+    });
+  } else {
+    setTimeout(initializeCartDetection, 2000);
+  }
+}
+
+// ========================================
+// END CART ABANDONMENT DETECTION SYSTEM
+// ========================================
