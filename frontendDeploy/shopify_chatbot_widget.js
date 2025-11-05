@@ -969,6 +969,57 @@ function showProductRecommendation(product) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot-message';
 
+    // Get currency info from Shopify or product data
+    const getCurrencySymbol = () => {
+        // Try to get currency from Shopify global
+        if (window.Shopify && window.Shopify.currency && window.Shopify.currency.active) {
+            const currency = window.Shopify.currency.active;
+            switch(currency) {
+                case 'INR': return '₹';
+                case 'USD': return '$';
+                case 'EUR': return '€';
+                case 'GBP': return '£';
+                case 'JPY': return '¥';
+                case 'CAD': return 'C$';
+                case 'AUD': return 'A$';
+                default: return currency + ' ';
+            }
+        }
+        
+        // Try to get currency from product price string
+        if (product.variants && product.variants[0] && product.variants[0].price) {
+            const priceStr = product.variants[0].price.toString();
+            if (priceStr.includes('₹') || priceStr.includes('INR')) return '₹';
+            if (priceStr.includes('$')) return '$';
+            if (priceStr.includes('€')) return '€';
+            if (priceStr.includes('£')) return '£';
+        }
+        
+        // Default fallback - detect from shop domain or default to INR
+        const shopDomain = window.SHOP_DOMAIN || SHOP_DOMAIN || '';
+        if (shopDomain.includes('.in') || shopDomain.includes('india')) {
+            return '₹';
+        }
+        
+        return '₹'; // Default to INR for your store
+    };
+
+    // Format price with proper currency
+    const formatPrice = (price) => {
+        if (!price) return '';
+        const currencySymbol = getCurrencySymbol();
+        
+        // Clean the price - remove any existing currency symbols
+        const cleanPrice = price.toString().replace(/[₹$€£¥]/g, '').trim();
+        
+        // Format as number with proper decimals
+        const numPrice = parseFloat(cleanPrice);
+        if (isNaN(numPrice)) return price;
+        
+        // Format with currency symbol
+        return currencySymbol + numPrice.toFixed(2);
+    };
+
     // Build product card with image, title, price, and link
     messageDiv.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;">
@@ -978,7 +1029,7 @@ function showProductRecommendation(product) {
             <div>
                 <a href="/products/${product.handle}" target="_blank" style="font-weight:bold;color:#007bff;text-decoration:none;">${product.title}</a>
                 <div style="color:#333;font-size:14px;">
-                    ${product.variants && product.variants[0] ? '$' + product.variants[0].price : ''}
+                    ${product.variants && product.variants[0] ? formatPrice(product.variants[0].price) : ''}
                 </div>
             </div>
         </div>
@@ -1080,298 +1131,3 @@ function trackSatisfactionRating(rating) {
         sessionId: sessionId
     });
 }
-
-
-// ========================================
-// CART ABANDONMENT DETECTION SYSTEM
-// ========================================
-
-// Cart Abandonment Detection - Auto-trigger after configurable delay
-class CartAbandonmentDetector {
-  constructor(options = {}) {
-    this.sessionId = `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    this.triggered = false;
-    this.triggerDelay = options.delay || 30000; // Default 30 seconds instead of 1 second
-    this.testMode = options.testMode || false;
-    this.init();
-  }
-
-  init() {
-    console.log(`🛒 Cart Abandonment Detector initialized - will trigger in ${this.triggerDelay/1000} seconds`);
-    
-    // Auto-trigger after delay
-    setTimeout(() => {
-      this.triggerAbandonmentOffer();
-    }, this.triggerDelay);
-  }
-
-  async triggerAbandonmentOffer() {
-    if (this.triggered) return;
-    this.triggered = true;
-
-    console.log('🛒 Triggering cart abandonment offer...');
-
-    try {
-      // Use the same API URL detection as the main widget
-      const apiUrls = getApiUrls();
-      const shopDomain = window.SHOP_DOMAIN || window.SHOPIFY_CHATBOT_CONFIG?.shop_domain;
-      
-      if (!shopDomain) {
-        console.error('❌ No shop domain found');
-        return;
-      }
-
-      // Use the dynamic API URL instead of hardcoded
-      const apiUrl = apiUrls.abandoned_cart_discount;
-      console.log('🛒 Using API URL:', apiUrl);
-
-      const payload = {
-        shop_domain: shopDomain,
-        session_id: this.sessionId,
-        customer_id: this.getCustomerId(),
-        cart_token: this.testMode ? 'test-token-' + Date.now() : this.getCartToken(),
-        products: this.testMode ? [
-          {
-            id: 'test-product',
-            title: 'Test Product',
-            price: '29.99'
-          }
-        ] : this.getCartProducts()
-      };
-
-      console.log('🛒 Sending payload:', payload);
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      let result;
-      const responseText = await response.text();
-      
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        console.log('❌ Failed to parse API response:', responseText);
-        return;
-      }
-
-      console.log('✅ Cart abandonment API response:', result);
-
-      if (response.ok && (result.discountCode || result.discount_code)) {
-        this.showDiscountInChat(result);
-        
-        // Track the discount offer
-        if (typeof trackAnalyticsEvent === 'function') {
-          trackAnalyticsEvent('discount_offered', {
-            discountCode: result.discountCode || result.discount_code,
-            sessionId: this.sessionId,
-            customerName: customerName || 'Anonymous'
-          });
-        }
-      } else {
-        console.error('❌ API failed:', result);
-      }
-
-    } catch (error) {
-      console.error('❌ Cart abandonment error:', error);
-    }
-  }
-
-  getCustomerId() {
-    if (window.Shopify && window.Shopify.customer && window.Shopify.customer.id) {
-      return window.Shopify.customer.id.toString();
-    }
-    return null;
-  }
-
-  getCartToken() {
-    // Try to get real cart token from Shopify
-    if (window.Shopify && window.Shopify.cart && window.Shopify.cart.token) {
-      return window.Shopify.cart.token;
-    }
-    return 'fallback-token-' + Date.now();
-  }
-
-  async getCartProducts() {
-    // Try to get real cart products
-    try {
-      const response = await fetch('/cart.js');
-      const cart = await response.json();
-      return cart.items?.map(item => ({
-        id: item.product_id,
-        title: item.product_title,
-        price: item.price / 100 // Convert cents to dollars
-      })) || [];
-    } catch (error) {
-      console.warn('Could not fetch cart products:', error);
-      return [];
-    }
-  }
-
-  showDiscountInChat(offerData) {
-    console.log('🎉 Showing discount in chat:', offerData);
-
-    const discountCode = offerData.discountCode || offerData.discount_code;
-    const discount = offerData.discount || offerData.discount_percentage || '10';
-    
-    // Find chat container using the same selector as the main widget
-    const chatContainer = document.getElementById('chat-messages');
-    
-    if (chatContainer) {
-      // Add discount message to chat
-      const discountMessage = document.createElement('div');
-      discountMessage.className = 'message bot-message discount-message';
-      discountMessage.innerHTML = `
-        <div style="
-          background: linear-gradient(135deg, #00A651 0%, #00D563 100%);
-          color: white;
-          padding: 16px;
-          border-radius: 12px;
-          margin: 10px 0;
-          text-align: center;
-          box-shadow: 0 4px 12px rgba(0,166,81,0.3);
-        ">
-          <div style="font-size: 18px; margin-bottom: 8px;">🎉</div>
-          <div style="font-weight: bold; margin-bottom: 8px;">Special Discount for You!</div>
-          <div style="margin-bottom: 12px;">Save ${discount}% on your purchase</div>
-          <div style="
-            background: rgba(255,255,255,0.2);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 16px;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-          ">${discountCode}</div>
-          <div style="font-size: 12px; opacity: 0.9;">Use this code at checkout</div>
-        </div>
-      `;
-      
-      chatContainer.appendChild(discountMessage);
-      
-      // Scroll to show the message
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-
-    // Also show as notification
-    this.showNotification(offerData);
-  }
-
-  showNotification(offerData) {
-    const discountCode = offerData.discountCode || offerData.discount_code;
-    const discount = offerData.discount || offerData.discount_percentage || '10';
-
-    // Remove existing notification
-    const existing = document.querySelector('.cart-discount-notification');
-    if (existing) existing.remove();
-
-    // Create notification
-    const notification = document.createElement('div');
-    notification.className = 'cart-discount-notification';
-    notification.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #00A651 0%, #00D563 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0,166,81,0.3);
-        z-index: 10000;
-        max-width: 300px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        animation: slideInFromRight 0.4s ease-out;
-      ">
-        <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">
-          🎉 Discount Available!
-        </div>
-        <div style="margin-bottom: 12px; font-size: 14px;">
-          Save ${discount}% with code:
-        </div>
-        <div style="
-          background: rgba(255,255,255,0.2);
-          padding: 10px;
-          border-radius: 6px;
-          text-align: center;
-          font-weight: bold;
-          font-size: 16px;
-          letter-spacing: 1px;
-          margin-bottom: 8px;
-        ">${discountCode}</div>
-        <button onclick="this.parentElement.parentElement.remove()" style="
-          position: absolute;
-          top: 8px;
-          right: 12px;
-          background: none;
-          border: none;
-          color: white;
-          cursor: pointer;
-          font-size: 18px;
-          opacity: 0.7;
-        ">×</button>
-      </div>
-    `;
-
-    // Add CSS animation if not already present
-    if (!document.querySelector('#cart-discount-animations')) {
-      const style = document.createElement('style');
-      style.id = 'cart-discount-animations';
-      style.textContent = `
-        @keyframes slideInFromRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    document.body.appendChild(notification);
-
-    // Auto-remove after 15 seconds
-    setTimeout(() => {
-      if (notification.parentElement) {
-        notification.remove();
-      }
-    }, 15000);
-  }
-}
-
-// Initialize cart abandonment detection when widget loads
-// Use a more conservative approach
-if (typeof window !== 'undefined') {
-  const initializeCartDetection = () => {
-    // Only initialize if the main widget is ready and we have shop domain
-    if ((window.SHOPIFY_CHATBOT_CONFIG || window.SHOP_DOMAIN) && 
-        document.getElementById('shopify-chatbot-widget')) {
-      
-      console.log('🛒 Initializing cart abandonment detection...');
-      
-      // Create detector with safer defaults
-      window.cartAbandonmentDetector = new CartAbandonmentDetector({
-        delay: 30000, // 30 seconds instead of 1 second
-        testMode: false // Set to true for testing
-      });
-    } else {
-      // Retry after a short delay if widget isn't ready
-      setTimeout(initializeCartDetection, 1000);
-    }
-  };
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initializeCartDetection, 2000);
-    });
-  } else {
-    setTimeout(initializeCartDetection, 2000);
-  }
-}
-
-// ========================================
-// END CART ABANDONMENT DETECTION SYSTEM
-// ========================================
