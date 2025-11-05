@@ -882,13 +882,42 @@ async function sendMessage() {
                 window.sessionId = payload_data.session_id;
                 localStorage.setItem('shopifyChatbotSessionId', payload_data.session_id);
             }
-            // Add bot response to UI
-            if (chatMessages) {
-                const botDiv = document.createElement('div');
-                botDiv.className = 'message bot-message';
-                botDiv.innerHTML = payload_data.response;
-                chatMessages.appendChild(botDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Check if this is a product recommendation response
+            if (payload_data.response_type === "product_recommendations") {
+                // Show the intro message first
+                if (chatMessages) {
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'message bot-message';
+                    botDiv.innerHTML = payload_data.response;
+                    chatMessages.appendChild(botDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+                
+                // Show each product as a separate card
+                if (payload_data.recommendations && payload_data.recommendations.length > 0) {
+                    payload_data.recommendations.forEach(product => {
+                        showProductRecommendation(product);
+                    });
+                    
+                    // Track recommendation event
+                    trackAnalyticsEvent('product_recommendations_shown', {
+                        customerName: customerName || 'Anonymous',
+                        sessionId: sessionId,
+                        recommendationType: 'chat_request',
+                        productCount: payload_data.recommendations.length,
+                        productIds: payload_data.recommendations.map(p => p.id || p.product_id)
+                    });
+                }
+            } else {
+                // Regular text message
+                if (chatMessages) {
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'message bot-message';
+                    botDiv.innerHTML = payload_data.response;
+                    chatMessages.appendChild(botDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
             }
         } else {
             throw new Error('No response content received');
