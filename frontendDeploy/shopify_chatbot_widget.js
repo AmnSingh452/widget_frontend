@@ -344,6 +344,17 @@ function applyWidgetStyles(settings) {
     // Event listeners (re-bind)
     if (window.chatToggleButton) {
         window.chatToggleButton.addEventListener('click', () => {
+            // Hide welcome popup immediately when chat button is clicked
+            if (window.smartbotWelcomePopup) {
+                window.smartbotWelcomePopup.style.opacity = '0';
+                setTimeout(() => {
+                    if (window.smartbotWelcomePopup) {
+                        window.smartbotWelcomePopup.remove();
+                        window.smartbotWelcomePopup = null;
+                    }
+                }, 300);
+            }
+            
             window.chatWindow.classList.toggle('chat-window-hidden');
             if (!window.chatWindow.classList.contains('chat-window-hidden')) {
                 loadChatHistory();
@@ -391,11 +402,16 @@ function applyWidgetStyles(settings) {
         }, 500);
     }
     
+    // Add welcome popup after widget is fully initialized
+    setTimeout(() => {
+        addWelcomePopup();
+    }, 1000);
+    
     console.log('✅ Jarvis Widget initialization complete');
 })();
 
 // Add floating welcome popup
-(function addWelcomePopup() {
+function addWelcomePopup() {
     if (!document.getElementById('smartbot-welcome-popup')) {
         const popup = document.createElement('div');
         popup.id = 'smartbot-welcome-popup';
@@ -403,7 +419,21 @@ function applyWidgetStyles(settings) {
         popup.style.zIndex = '10001';
         popup.style.maxWidth = '260px';
         popup.style.bottom = '100px';
-        popup.style.right = '36px';
+        
+        // Position popup according to widget settings
+        const position = widgetSettings.position || 'bottom-right';
+        if (position.includes('right')) {
+            popup.style.right = '36px';
+            popup.style.left = 'auto';
+        } else if (position.includes('left')) {
+            popup.style.left = '36px';
+            popup.style.right = 'auto';
+        } else {
+            // Default to right if position is unclear
+            popup.style.right = '36px';
+            popup.style.left = 'auto';
+        }
+        
         popup.style.background = 'rgba(255,255,255,0.95)';
         popup.style.borderRadius = '18px';
         popup.style.boxShadow = '0 4px 24px rgba(0,0,0,0.18)';
@@ -419,24 +449,34 @@ function applyWidgetStyles(settings) {
             <span style="font-size:2em;">🤖</span>
             <span>How can I help you?</span>
         `;
+        
         popup.onclick = function() {
             document.getElementById('chat-toggle-button').click();
             popup.style.opacity = '0';
             setTimeout(() => popup.remove(), 300);
         };
+        
         document.body.appendChild(popup);
+        
+        // Store popup reference globally so it can be removed from button click
+        window.smartbotWelcomePopup = popup;
+        
         setTimeout(() => {
             popup.style.opacity = '1';
         }, 400);
+        
         // Auto-hide after 8 seconds if not clicked
         setTimeout(() => {
             if (document.body.contains(popup)) {
                 popup.style.opacity = '0';
-                setTimeout(() => popup.remove(), 300);
+                setTimeout(() => {
+                    popup.remove();
+                    window.smartbotWelcomePopup = null;
+                }, 300);
             }
         }, 8000);
     }
-})();
+}
 
 // --- BEGIN JARVIS 2.0 MULTI-TENANT INIT PATCH ---
 /*
