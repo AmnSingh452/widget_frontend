@@ -876,6 +876,10 @@ async function sendMessage() {
         }
         // Handle response
         const payload_data = data.data || data;
+        console.log('🔍 Debug - Full payload_data:', payload_data);
+        console.log('🔍 Debug - response_type:', payload_data.response_type);
+        console.log('🔍 Debug - recommendations:', payload_data.recommendations);
+        
         if (payload_data.response) {
             // Update session ID if provided
             if (payload_data.session_id) {
@@ -884,12 +888,22 @@ async function sendMessage() {
             }
             
             // Check if this is a product recommendation response
-            if (payload_data.response_type === "product_recommendations") {
-                // Show the intro message first
+            // Check multiple possible ways the backend might indicate recommendations
+            const isProductRecommendation = payload_data.response_type === "product_recommendations" ||
+                                           payload_data.response_type === "recommendations" ||
+                                           (payload_data.recommendations && payload_data.recommendations.length > 0) ||
+                                           payload_data.response.includes("Here are some great products");
+            
+            console.log('🔍 Debug - isProductRecommendation:', isProductRecommendation);
+            
+            if (isProductRecommendation) {
+                // Show a brief intro message first (without the product details)
                 if (chatMessages) {
                     const botDiv = document.createElement('div');
                     botDiv.className = 'message bot-message';
-                    botDiv.innerHTML = payload_data.response;
+                    // Extract just the intro part before product details
+                    const introMessage = payload_data.response.split('\n')[0] || "Here are some great products for you:";
+                    botDiv.innerHTML = introMessage;
                     chatMessages.appendChild(botDiv);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
@@ -908,6 +922,16 @@ async function sendMessage() {
                         productCount: payload_data.recommendations.length,
                         productIds: payload_data.recommendations.map(p => p.id || p.product_id)
                     });
+                } else {
+                    // Fallback: if no structured recommendations, show the full response
+                    console.log('⚠️ No structured recommendations found, showing full response');
+                    if (chatMessages) {
+                        const botDiv = document.createElement('div');
+                        botDiv.className = 'message bot-message';
+                        botDiv.innerHTML = payload_data.response;
+                        chatMessages.appendChild(botDiv);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
                 }
             } else {
                 // Regular text message
