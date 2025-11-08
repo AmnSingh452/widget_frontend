@@ -897,18 +897,17 @@ async function sendMessage() {
             console.log('🔍 Debug - isProductRecommendation:', isProductRecommendation);
             
             if (isProductRecommendation) {
-                // Show a brief intro message first (without the product details)
+                // Show a brief intro message first
                 if (chatMessages) {
                     const botDiv = document.createElement('div');
                     botDiv.className = 'message bot-message';
-                    // Extract just the intro part before product details
                     const introMessage = payload_data.response.split('\n')[0] || "Here are some great products for you:";
                     botDiv.innerHTML = introMessage;
                     chatMessages.appendChild(botDiv);
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                 }
                 
-                // Show each product as a separate card
+                // Check for structured recommendations first
                 if (payload_data.recommendations && payload_data.recommendations.length > 0) {
                     payload_data.recommendations.forEach(product => {
                         showProductRecommendation(product);
@@ -923,14 +922,35 @@ async function sendMessage() {
                         productIds: payload_data.recommendations.map(p => p.id || p.product_id)
                     });
                 } else {
-                    // Fallback: if no structured recommendations, show the full response
-                    console.log('⚠️ No structured recommendations found, showing full response');
-                    if (chatMessages) {
-                        const botDiv = document.createElement('div');
-                        botDiv.className = 'message bot-message';
-                        botDiv.innerHTML = payload_data.response;
-                        chatMessages.appendChild(botDiv);
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    // Parse text response to extract product information
+                    console.log('📝 Parsing text response for product recommendations');
+                    const products = parseProductRecommendationsFromText(payload_data.response);
+                    console.log('🔍 Parsed products:', products);
+                    
+                    if (products.length > 0) {
+                        // Show each parsed product as a visual card
+                        products.forEach(product => {
+                            showProductRecommendation(product);
+                        });
+                        
+                        // Track recommendation event
+                        trackAnalyticsEvent('product_recommendations_shown', {
+                            customerName: customerName || 'Anonymous',
+                            sessionId: sessionId,
+                            recommendationType: 'chat_request_parsed',
+                            productCount: products.length,
+                            productIds: products.map(p => p.handle)
+                        });
+                    } else {
+                        // Final fallback: show full response as text
+                        console.log('⚠️ No products could be parsed, showing full response');
+                        if (chatMessages) {
+                            const botDiv = document.createElement('div');
+                            botDiv.className = 'message bot-message';
+                            botDiv.innerHTML = payload_data.response;
+                            chatMessages.appendChild(botDiv);
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
                     }
                 }
             } else {
@@ -1089,6 +1109,63 @@ function showProductRecommendation(product) {
     `;
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Parse product recommendations from text response
+function parseProductRecommendationsFromText(responseText) {
+    console.log('🔍 Parsing response text:', responseText);
+    const products = [];
+    
+    // Split response into product blocks
+    const productBlocks = responseText.split(/\n\s*\n/).filter(block => 
+        block.includes('**') && (block.includes('💰') || block.includes('🔗') || block.includes('🖼️'))
+    );
+    
+    console.log('🔍 Found product blocks:', productBlocks);
+    
+    productBlocks.forEach((block, index) => {
+        try {
+            // Extract title (text between ** **)
+            const titleMatch = block.match(/\*\*"?([^"*]+)"?\*\*/);
+            const title = titleMatch ? titleMatch[1].trim() : `Product ${index + 1}`;
+            
+            // Extract price (after 💰)
+            const priceMatch = block.match(/💰\s*([₹$€£¥]?[\d,]+\.?\d*)/);
+            const price = priceMatch ? priceMatch[1].replace(/[₹$€£¥]/g, '').replace(',', '') : '0';
+            
+            // Extract product handle/ID (after 🔗)
+            const handleMatch = block.match(/🔗\s*(?:Product ID:\s*)?([a-zA-Z0-9\-_]+)/);
+            const handle = handleMatch ? handleMatch[1].trim() : title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            
+            // Extract image URL (between parentheses after 🖼️)
+            const imageMatch = block.match(/🖼️.*?\(([^)]+)\)/);
+            const imageUrl = imageMatch ? imageMatch[1].trim() : '';
+            
+            console.log('🔍 Parsed product:', { title, price, handle, imageUrl });
+            
+            // Create product object in expected format
+            const product = {
+                title: title,
+                handle: handle,
+                variants: [{
+                    price: parseFloat(price) || 0
+                }],
+                images: imageUrl ? [{
+                    src: imageUrl
+                }] : [],
+                image: imageUrl ? {
+                    src: imageUrl
+                } : null
+            };
+            
+            products.push(product);
+        } catch (error) {
+            console.error('Error parsing product block:', error, block);
+        }
+    });
+    
+    console.log('✅ Final parsed products:', products);
+    return products;
 }
 
 function extractNameFromInput(input) {
