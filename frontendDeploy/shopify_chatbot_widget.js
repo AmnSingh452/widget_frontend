@@ -403,9 +403,10 @@ function applyWidgetStyles(settings) {
     }
     
     // Add welcome popup after widget is fully initialized
-    setTimeout(() => {
-        addWelcomePopup();
-    }, 1000);
+    // COMMENTED OUT: "How can I help you?" popup feature
+    // setTimeout(() => {
+    //     addWelcomePopup();
+    // }, 1000);
     
     console.log('✅ Jarvis Widget initialization complete');
 })();
